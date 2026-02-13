@@ -1,0 +1,2 @@
+// Export assets here
+export {};
