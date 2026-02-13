@@ -6,6 +6,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
 import { PuzzleProvider } from '@/context/puzzle-context';
+import { MultiplayerProvider } from '@/context/multiplayer-context';
 import { SplashProvider, useSplashContext } from '@/context/splash-context';
 import SplashScreen from './splash';
 
@@ -29,6 +30,27 @@ function AppContent() {
             animation: 'slide_from_bottom',
           }} 
         />
+        <Stack.Screen 
+          name="multiplayer-lobby" 
+          options={{ 
+            headerShown: false,
+            animation: 'slide_from_right',
+          }} 
+        />
+        <Stack.Screen 
+          name="multiplayer-game" 
+          options={{ 
+            headerShown: false,
+            animation: 'fade',
+          }} 
+        />
+        <Stack.Screen 
+          name="multiplayer-results" 
+          options={{ 
+            headerShown: false,
+            animation: 'slide_from_bottom',
+          }} 
+        />
       </Stack>
       
       {/* Splash screen overlay */}
@@ -47,8 +69,10 @@ export default function RootLayout() {
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <SplashProvider>
           <PuzzleProvider>
-            <AppContent />
-            <StatusBar style="light" />
+            <MultiplayerProvider>
+              <AppContent />
+              <StatusBar style="light" />
+            </MultiplayerProvider>
           </PuzzleProvider>
         </SplashProvider>
       </ThemeProvider>

@@ -9,6 +9,7 @@ import {
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 
 import FeedbackOverlay from '@/components/feedback-overlay';
 import PuzzleRenderer from '@/components/puzzles/puzzle-renderer';
@@ -183,15 +184,25 @@ export default function PuzzleFeedScreen() {
         )}
       </View>
 
-      {/* Floating help button at bottom */}
+      {/* Floating buttons at bottom */}
       {isInitialized && !showTutorialOverlay && !shouldShowSplash && (
-        <TouchableOpacity 
-          style={styles.helpButton}
-          onPress={handleShowTutorial}
-          activeOpacity={0.8}
-        >
-          <MaterialCommunityIcons name="help-circle" size={32} color="#ffffff" />
-        </TouchableOpacity>
+        <>
+          <TouchableOpacity 
+            style={styles.multiplayerButton}
+            onPress={() => router.push('/(tabs)/multiplayer')}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="account-group" size={32} color="#ffffff" />
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={styles.helpButton}
+            onPress={handleShowTutorial}
+            activeOpacity={0.8}
+          >
+            <MaterialCommunityIcons name="help-circle" size={32} color="#ffffff" />
+          </TouchableOpacity>
+        </>
       )}
 
       {/* Tutorial overlay - shows for first-time users or when help button is clicked */}
@@ -229,6 +240,23 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.3)',
     zIndex: 999,
+  },
+  multiplayerButton: {
+    position: 'absolute',
+    bottom: 40,
+    left: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#10b981',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
+    zIndex: 1000,
   },
   helpButton: {
     position: 'absolute',

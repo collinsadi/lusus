@@ -2,6 +2,8 @@
 
 An infinite vertical feed of ultra-short interactive puzzles built with Expo, React Native, and TypeScript.
 
+**🎮 NEW: Multiplayer Mode!** Compete with friends in real-time puzzle battles! See [MULTIPLAYER.md](./MULTIPLAYER.md) for full documentation.
+
 ## Overview
 
 Lusus is a mobile-first puzzle game featuring an infinite stream of micro-puzzles that take 3-8 seconds to solve. Each puzzle requires a single primary interaction (tap, drag, rotate, or timing) with immediate visual and haptic feedback.
@@ -22,6 +24,15 @@ scroll → solve → feedback → scroll → repeat
 - **Instant Feedback**: Visual animations + haptic responses
 - **Session Statistics**: Track streaks, success rate, and progress
 - **Deterministic Generation**: Seeded puzzles for reproducibility and sharing
+
+### Multiplayer Features
+- **Real-Time Competition**: Compete with friends via TCP sockets
+- **Room System**: Create or join rooms with unique codes
+- **Customizable Games**: Set target streaks (5-50) and time limits (30-600s)
+- **Live Leaderboards**: See player rankings update in real-time
+- **Victory Cards**: Shareable results cards for winners
+- **Local Network Play**: Peer-to-peer gaming on the same Wi-Fi
+- See [MULTIPLAYER.md](./MULTIPLAYER.md) and [MULTIPLAYER_SETUP.md](./MULTIPLAYER_SETUP.md) for complete documentation
 
 ### Technical Highlights
 - **Scalable Architecture**: Easy to add new puzzle types
