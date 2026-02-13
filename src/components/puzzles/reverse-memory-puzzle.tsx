@@ -1,8 +1,10 @@
 /**
  * Reverse Memory Puzzle Renderer
  * Implements reveal -> interference -> player action game loop
+ * With streak-based speed progression
  */
 import { PuzzleDifficultyController } from '@/services/puzzles/engine/difficulty-controller';
+import { StreakSpeedController } from '@/services/puzzles/engine/streak-speed-controller';
 import type { ReverseMemoryPuzzleData } from '@/types/puzzle';
 import React, { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
@@ -21,14 +23,49 @@ type GamePhase = 'reveal' | 'interference' | 'action' | 'complete';
 interface ReverseMemoryPuzzleProps {
   data: ReverseMemoryPuzzleData;
   onTap: (itemId: number) => void;
+  currentStreak?: number; // Current success streak for speed scaling
 }
 
-const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ data, onTap }) => {
+const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ 
+  data, 
+  onTap, 
+  currentStreak = 0 
+}) => {
   const [phase, setPhase] = useState<GamePhase>('reveal');
   const [tappedItems, setTappedItems] = useState<Set<number>>(new Set());
   
   const fadeOpacity = useSharedValue(0);
   const instructionOpacity = useSharedValue(1);
+  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+
+  // Calculate speed multipliers based on streak
+  const speedMultipliers = useMemo(
+    () => StreakSpeedController.getSpeedMultipliers(currentStreak),
+    [currentStreak]
+  );
+
+  // Apply speed scaling to timings
+  const scaledRevealDuration = useMemo(
+    () => StreakSpeedController.applySpeedMultiplier(data.revealDuration, speedMultipliers.reveal),
+    [data.revealDuration, speedMultipliers.reveal]
+  );
+
+  const scaledInterferenceDuration = useMemo(
+    () => StreakSpeedController.applySpeedMultiplier(800, speedMultipliers.interference),
+    [speedMultipliers.interference]
+  );
+
+  const scaledAnimationDuration = useMemo(
+    () => StreakSpeedController.applySpeedMultiplier(300, speedMultipliers.animation),
+    [speedMultipliers.animation]
+  );
+
+  const scaledActionTimeLimit = useMemo(
+    () => StreakSpeedController.applySpeedMultiplier(data.actionTimeLimit, speedMultipliers.reveal),
+    [data.actionTimeLimit, speedMultipliers.reveal]
+  );
+
+  const [timeRemaining, setTimeRemaining] = useState<number>(scaledActionTimeLimit);
 
   // Calculate grid dimensions
   const gridDimensions = useMemo(
@@ -42,30 +79,62 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ data, onTap }
     80
   );
 
-  // Phase lifecycle management
+  // Phase lifecycle management with speed scaling
   useEffect(() => {
-    fadeOpacity.value = withTiming(1, { duration: 300 });
+    fadeOpacity.value = withTiming(1, { duration: scaledAnimationDuration });
     
-    // Phase 1: Reveal sequence
+    // Phase 1: Reveal sequence (speed-scaled)
     if (phase === 'reveal') {
       const revealTimer = setTimeout(() => {
         setPhase('interference');
-      }, data.revealDuration);
+      }, scaledRevealDuration);
 
       return () => clearTimeout(revealTimer);
     }
 
-    // Phase 2: Show interference grid
+    // Phase 2: Show interference grid (speed-scaled)
     if (phase === 'interference') {
-      instructionOpacity.value = withTiming(0, { duration: 300 });
+      instructionOpacity.value = withTiming(0, { duration: scaledAnimationDuration });
       
       const interferenceTimer = setTimeout(() => {
         setPhase('action');
-      }, 800);
+        // Reset time remaining when entering action phase
+        setTimeRemaining(scaledActionTimeLimit);
+      }, scaledInterferenceDuration);
 
       return () => clearTimeout(interferenceTimer);
     }
-  }, [phase, data.revealDuration, fadeOpacity, instructionOpacity]);
+
+    // Phase 3: Action phase with countdown timer
+    if (phase === 'action') {
+      const startTime = Date.now();
+      
+      // Update timer every 100ms for smooth countdown
+      const countdownInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, scaledActionTimeLimit - elapsed);
+        setTimeRemaining(remaining);
+        
+        // Auto-fail when time runs out
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          setPhase('complete');
+          // Submit a timeout interaction (tap with invalid itemId)
+          onTap(-1); // -1 indicates timeout failure
+        }
+      }, 100);
+
+      timerRef.current = countdownInterval;
+
+      return () => {
+        clearInterval(countdownInterval);
+        if (timerRef.current) {
+          clearInterval(timerRef.current);
+          timerRef.current = null;
+        }
+      };
+    }
+  }, [phase, scaledRevealDuration, scaledInterferenceDuration, scaledAnimationDuration, fadeOpacity, instructionOpacity, scaledActionTimeLimit, onTap]);
 
   // Handle tap
   const handleTap = useCallback(
@@ -74,6 +143,12 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ data, onTap }
       
       // Prevent double-tap
       if (tappedItems.has(itemId)) return;
+
+      // Clear countdown timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
 
       setTappedItems(prev => new Set(prev).add(itemId));
       
@@ -124,7 +199,7 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ data, onTap }
             style={[
               styles.timerFill,
               {
-                width: `${(data.revealDuration / 3000) * 100}%`,
+                width: `${(scaledRevealDuration / 3000) * 100}%`,
               },
             ]}
           />
@@ -176,11 +251,44 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ data, onTap }
 
   // Render action phase (player taps decoys)
   const renderActionPhase = () => {
+    const timeProgress = timeRemaining / scaledActionTimeLimit;
+    const timeInSeconds = Math.ceil(timeRemaining / 1000);
+    
+    // Color changes based on time remaining
+    let timerColor = '#4CAF50'; // Green
+    if (timeProgress < 0.3) {
+      timerColor = '#F44336'; // Red
+    } else if (timeProgress < 0.5) {
+      timerColor = '#FF9800'; // Orange
+    }
+    
     return (
       <View style={styles.phaseContainer}>
-        <Text style={styles.instructionText}>
-          Tap what was NOT in the sequence
-        </Text>
+        <View style={styles.headerSection}>
+          <Text style={styles.instructionText}>
+            Tap what was NOT in the sequence
+          </Text>
+          
+          {/* Countdown Timer */}
+          <View style={styles.timerContainer}>
+            <View style={styles.timerCircle}>
+              <Text style={[styles.timerText, { color: timerColor }]}>
+                {timeInSeconds}s
+              </Text>
+            </View>
+            <View style={styles.timerProgressBar}>
+              <View
+                style={[
+                  styles.timerProgressFill,
+                  {
+                    width: `${timeProgress * 100}%`,
+                    backgroundColor: timerColor,
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        </View>
         
         <View
           style={[
@@ -253,13 +361,48 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
+  headerSection: {
+    alignItems: 'center',
+    marginBottom: 24,
+    width: '100%',
+  },
   instructionText: {
     fontSize: 18,
     fontWeight: '600',
     color: '#FFFFFF',
-    marginBottom: 32,
+    marginBottom: 16,
     textAlign: 'center',
     letterSpacing: 0.5,
+  },
+  timerContainer: {
+    alignItems: 'center',
+    gap: 12,
+  },
+  timerCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  timerText: {
+    fontSize: 20,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  timerProgressBar: {
+    width: 200,
+    height: 6,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 3,
+    overflow: 'hidden',
+  },
+  timerProgressFill: {
+    height: '100%',
+    borderRadius: 3,
   },
   sequenceContainer: {
     flexDirection: 'row',

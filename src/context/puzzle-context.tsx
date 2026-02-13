@@ -47,10 +47,18 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
 
   // Generate a fresh random puzzle
   const generateNextPuzzle = useCallback(
-    (totalSolved: number): PuzzleInstance | null => {
+    (totalSolved: number, currentStreak: number): PuzzleInstance | null => {
       // Use ReverseMemory as primary puzzle type
-      // Difficulty increases with total puzzles solved for progression
-      const difficulty = Math.min(0.3 + (totalSolved * 0.05), 1.0);
+      // Base difficulty increases gradually with total puzzles solved
+      const baseDifficulty = Math.min(0.3 + (totalSolved * 0.03), 0.7);
+      
+      // Streak bonus: significantly increase difficulty every 5 streaks
+      const streakTier = Math.floor(currentStreak / 5);
+      const streakBonus = streakTier * 0.15; // 15% boost per 5-streak milestone
+      
+      // Combined difficulty (capped at 1.0)
+      const difficulty = Math.min(baseDifficulty + streakBonus, 1.0);
+      
       // Generate a unique seed for each puzzle using current timestamp
       const seed = Date.now() + Math.random() * 1000000;
       return PuzzleRegistry.generatePuzzle(PuzzleType.REVERSE_MEMORY, seed, 0, difficulty);
@@ -60,8 +68,8 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
 
   // Initialize puzzles on mount
   useEffect(() => {
-    const firstPuzzle = generateNextPuzzle(0);
-    const secondPuzzle = generateNextPuzzle(0);
+    const firstPuzzle = generateNextPuzzle(0, 0);
+    const secondPuzzle = generateNextPuzzle(0, 0);
     
     setCurrentPuzzle(firstPuzzle);
     setNextPuzzle(secondPuzzle);
@@ -125,18 +133,21 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
   const loadNextPuzzle = useCallback(() => {
     if (!nextPuzzle) return;
 
-    // Generate a fresh puzzle based on current progress
-    const newNextPuzzle = generateNextPuzzle(sessionStats.totalPuzzles + 1);
+    // Generate a fresh puzzle based on current progress and streak
+    const newNextPuzzle = generateNextPuzzle(
+      sessionStats.totalPuzzles + 1,
+      sessionStats.currentStreak
+    );
 
     setCurrentPuzzle(nextPuzzle);
     setNextPuzzle(newNextPuzzle);
     setLastResult(null);
-  }, [nextPuzzle, sessionStats.totalPuzzles, generateNextPuzzle]);
+  }, [nextPuzzle, sessionStats.totalPuzzles, sessionStats.currentStreak, generateNextPuzzle]);
 
   // Reset session
   const resetSession = useCallback(() => {
-    setCurrentPuzzle(generateNextPuzzle(0));
-    setNextPuzzle(generateNextPuzzle(0));
+    setCurrentPuzzle(generateNextPuzzle(0, 0));
+    setNextPuzzle(generateNextPuzzle(0, 0));
     setLastResult(null);
     setSessionStats({
       totalPuzzles: 0,

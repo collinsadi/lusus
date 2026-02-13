@@ -8,6 +8,7 @@ export interface DifficultyParams {
   gridSize: number;
   decoyCount: number;
   revealDuration: number; // in milliseconds
+  actionTimeLimit: number; // in milliseconds - time limit for player action
 }
 
 export class PuzzleDifficultyController {
@@ -42,12 +43,14 @@ export class PuzzleDifficultyController {
     const progressionFactor = Math.log(round + 2) / Math.log(2); // log2(round + 2)
     const scaledDifficulty = Math.min(difficulty * progressionFactor, 1);
 
-    // Sequence length: 2-6 items
-    const sequenceLength = Math.floor(2 + scaledDifficulty * 4);
+    // Sequence length: 3-8 items (increased from 2-6 to make it harder to memorize)
+    const minSequence = 3;
+    const maxSequence = 8;
+    const sequenceLength = Math.floor(minSequence + scaledDifficulty * (maxSequence - minSequence));
 
-    // Grid size: 6-16 items (2x3 to 4x4)
-    const gridSizeOptions = [6, 9, 12, 16];
-    const gridIndex = Math.min(Math.floor(scaledDifficulty * 4), 3);
+    // Grid size: 9-16 items (3x3 to 4x4) - increased minimum for more items
+    const gridSizeOptions = [9, 12, 16];
+    const gridIndex = Math.min(Math.floor(scaledDifficulty * 3), 2);
     const gridSize = gridSizeOptions[gridIndex];
 
     // Decoy count: ensures at least 2 decoys, scales with grid
@@ -55,16 +58,22 @@ export class PuzzleDifficultyController {
     const maxDecoys = Math.max(gridSize - sequenceLength, minDecoys);
     const decoyCount = Math.max(minDecoys, Math.floor(maxDecoys * (0.5 + scaledDifficulty * 0.5)));
 
-    // Reveal duration: 3000ms to 1500ms (faster as difficulty increases)
+    // Reveal duration: 3000ms to 1200ms (faster as difficulty increases)
     const maxRevealTime = 3000;
-    const minRevealTime = 1500;
+    const minRevealTime = 1200; // Reduced from 1500ms for harder challenge
     const revealDuration = Math.floor(maxRevealTime - (scaledDifficulty * (maxRevealTime - minRevealTime)));
+
+    // Action time limit: 8000ms to 4000ms (less time as difficulty increases)
+    const maxActionTime = 8000;
+    const minActionTime = 4000;
+    const actionTimeLimit = Math.floor(maxActionTime - (scaledDifficulty * (maxActionTime - minActionTime)));
 
     return {
       sequenceLength: Math.min(sequenceLength, gridSize - 2), // Ensure room for decoys
       gridSize,
       decoyCount,
       revealDuration,
+      actionTimeLimit,
     };
   }
 
@@ -73,7 +82,6 @@ export class PuzzleDifficultyController {
    */
   static getGridDimensions(gridSize: number): { rows: number; cols: number } {
     const dimensionMap: Record<number, { rows: number; cols: number }> = {
-      6: { rows: 2, cols: 3 },
       9: { rows: 3, cols: 3 },
       12: { rows: 3, cols: 4 },
       16: { rows: 4, cols: 4 },

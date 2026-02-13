@@ -76,11 +76,15 @@ export default function PuzzleFeedScreen() {
 
       return (
         <View style={styles.puzzleContainer}>
-          <PuzzleRenderer instance={item} onInteraction={handleInteraction} />
+          <PuzzleRenderer 
+            instance={item} 
+            onInteraction={handleInteraction}
+            currentStreak={sessionStats.currentStreak}
+          />
         </View>
       );
     },
-    [handleInteraction]
+    [handleInteraction, sessionStats.currentStreak]
   );
 
   const keyExtractor = useCallback((item: any, index: number) => {

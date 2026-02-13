@@ -14,6 +14,7 @@ scroll → solve → feedback → scroll → repeat
 ## Features
 
 ### Core Experience
+- **Custom Splash Screen**: Playful entry experience with random motivational notes
 - **Reverse Memory Gameplay**: Fast-paced cognitive challenge testing working memory
 - **Progressive Difficulty**: Smooth scaling with relief rounds to prevent fatigue
 - **5 Puzzle Types**: Reverse memory (primary), oddity detection, timing alignment, spatial rotation, and rule switching
@@ -107,6 +108,28 @@ Tap items matching a rule (color or shape) that switches mid-puzzle.
 - **Variations**: Different switch timings and decoy densities
 
 ## Architecture
+
+### Splash Screen System
+The app features a custom in-app splash screen with:
+
+**Components:**
+- `SplashNoteService`: Manages a collection of playful, brain-themed motivational notes
+- `useSplash`: Hook for splash state management (shown/dismissed)
+- `SplashContext`: Global state provider for splash visibility
+- `SplashScreen`: Animated component with random note + play button
+
+**Features:**
+- Random note selection per session (avoids immediate repeats)
+- Smooth entrance animations (fade, scale, floating)
+- Haptic feedback on button press
+- Lightweight state tracking (`hasSeenSplash`)
+- Easy to extend with seasonal themes or onboarding
+
+**Usage in Testing:**
+```typescript
+const { resetSplash } = useSplashContext();
+// Call resetSplash() to show splash again
+```
 
 ### Puzzle Engine
 The system is built on a modular architecture with clear separation of concerns:

@@ -123,6 +123,21 @@ export interface RuleSwitchPuzzleData {
 }
 
 /**
+ * Visual element types for Reverse Memory puzzle
+ * Combines geometric shapes and Expo vector icons
+ */
+export type VisualElementType = 
+  | 'circle' 
+  | 'square' 
+  | 'triangle'
+  | 'star'
+  | 'heart'
+  | 'flash'
+  | 'music'
+  | 'diamond'
+  | 'trophy';
+
+/**
  * Reverse Memory puzzle specific config
  */
 export interface ReverseMemoryConfig extends PuzzleConfig {
@@ -130,22 +145,24 @@ export interface ReverseMemoryConfig extends PuzzleConfig {
   gridSize: number; // Total items in grid (e.g., 9 for 3x3)
   revealDuration: number; // milliseconds
   decoyCount: number; // Number of decoys not in sequence
+  actionTimeLimit: number; // Time limit for player to respond in action phase (milliseconds)
 }
 
 export interface ReverseMemoryPuzzleData {
   sequence: Array<{
     id: number;
-    shape: 'circle' | 'square' | 'triangle';
+    shape: VisualElementType;
     color: string;
   }>;
   allItems: Array<{
     id: number;
-    shape: 'circle' | 'square' | 'triangle';
+    shape: VisualElementType;
     color: string;
     isInSequence: boolean;
   }>;
   gridSize: number;
   revealDuration: number;
+  actionTimeLimit: number; // Time limit for action phase in milliseconds
 }
 
 /**

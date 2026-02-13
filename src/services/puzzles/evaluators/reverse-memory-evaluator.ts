@@ -3,10 +3,10 @@
  * Validates that player tapped only items NOT in the original sequence
  */
 import type {
-  PuzzleInstance,
-  UserInteraction,
-  EvaluationResult,
-  ReverseMemoryPuzzleData,
+    EvaluationResult,
+    PuzzleInstance,
+    ReverseMemoryPuzzleData,
+    UserInteraction,
 } from '@/types/puzzle';
 import { BasePuzzleEvaluator } from '../engine/base-evaluator';
 
@@ -22,6 +22,16 @@ export class ReverseMemoryEvaluator extends BasePuzzleEvaluator {
         success: false,
         timeTaken,
         feedback: this.createFailureFeedback(),
+      };
+    }
+
+    // Check for timeout (itemId = -1)
+    if (tappedItemId === -1) {
+      return {
+        success: false,
+        timeTaken,
+        accuracy: 0,
+        feedback: this.createTimeoutFailureFeedback(),
       };
     }
 
@@ -62,6 +72,19 @@ export class ReverseMemoryEvaluator extends BasePuzzleEvaluator {
       hapticIntensity: 'medium' as const,
       animation: 'shake' as const,
       colorBurst: ['#FF6B6B', '#FFA07A'],
+    };
+  }
+
+  /**
+   * Creates specialized failure feedback for timeout
+   */
+  private createTimeoutFailureFeedback() {
+    return {
+      type: 'failure' as const,
+      message: 'Time ran out!',
+      hapticIntensity: 'light' as const,
+      animation: 'dissolve' as const,
+      colorBurst: ['#FF9800', '#FFC107'],
     };
   }
 }

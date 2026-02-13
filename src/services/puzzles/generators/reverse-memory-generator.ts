@@ -3,17 +3,18 @@
  * Creates puzzles where player taps items NOT in the original sequence
  */
 import type {
-  PuzzleDefinition,
-  PuzzleGenerator,
-  ReverseMemoryConfig,
-  ReverseMemoryPuzzleData,
-  PuzzleType,
-  InteractionType,
+    InteractionType,
+    PuzzleDefinition,
+    PuzzleGenerator,
+    PuzzleType,
+    ReverseMemoryConfig,
+    ReverseMemoryPuzzleData,
 } from '@/types/puzzle';
-import { SeededRandom, generateColorPalette } from '../engine/seeded-random';
 import { PuzzleDifficultyController } from '../engine/difficulty-controller';
+import { SeededRandom, generateColorPalette } from '../engine/seeded-random';
 
-type Shape = 'circle' | 'square' | 'triangle';
+// Import visual element type from shared types
+type VisualElement = 'circle' | 'square' | 'triangle' | 'star' | 'heart' | 'flash' | 'music' | 'diamond' | 'trophy';
 
 export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConfig> {
   generateDefinition(seed: number, difficulty: number = 0.5): PuzzleDefinition {
@@ -31,6 +32,7 @@ export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConf
       gridSize: difficultyParams.gridSize,
       decoyCount: difficultyParams.decoyCount,
       revealDuration: difficultyParams.revealDuration,
+      actionTimeLimit: difficultyParams.actionTimeLimit,
     };
 
     return {
@@ -50,15 +52,25 @@ export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConf
     // Generate color palette
     const colors = generateColorPalette(definition.seed, 5);
     
-    // Available shapes
-    const shapes: Shape[] = ['circle', 'square', 'triangle'];
+    // Available visual elements: mix of geometric shapes and Expo icons
+    const visualElements: VisualElement[] = [
+      'circle', 
+      'square', 
+      'triangle',
+      'star',
+      'heart',
+      'flash',
+      'music',
+      'diamond',
+      'trophy',
+    ];
 
     // Generate the memory sequence (what player should remember)
     const sequence: ReverseMemoryPuzzleData['sequence'] = [];
     for (let i = 0; i < config.sequenceLength; i++) {
       sequence.push({
         id: i,
-        shape: random.pick(shapes),
+        shape: random.pick(visualElements),
         color: random.pick(colors),
       });
     }
@@ -69,13 +81,13 @@ export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConf
     );
 
     // Generate decoys (items NOT in sequence)
-    const decoys: Array<{ shape: Shape; color: string }> = [];
+    const decoys: Array<{ shape: VisualElement; color: string }> = [];
     let attempts = 0;
     const maxAttempts = 100;
 
     while (decoys.length < config.decoyCount && attempts < maxAttempts) {
       attempts++;
-      const decoyShape = random.pick(shapes);
+      const decoyShape = random.pick(visualElements);
       const decoyColor = random.pick(colors);
       const decoyId = `${decoyShape}-${decoyColor}`;
 
@@ -95,7 +107,7 @@ export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConf
     // Combine sequence items and decoys into grid
     const allGridItems: Array<{
       id: number;
-      shape: Shape;
+      shape: VisualElement;
       color: string;
       isInSequence: boolean;
     }> = [];
@@ -125,7 +137,7 @@ export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConf
 
     // Fill remaining grid spaces with random items if needed
     while (shuffledItems.length < config.gridSize) {
-      const fillShape = random.pick(shapes);
+      const fillShape = random.pick(visualElements);
       const fillColor = random.pick(colors);
       shuffledItems.push({
         id: shuffledItems.length,
@@ -140,6 +152,7 @@ export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConf
       allItems: shuffledItems.slice(0, config.gridSize),
       gridSize: config.gridSize,
       revealDuration: config.revealDuration,
+      actionTimeLimit: config.actionTimeLimit,
     };
   }
 }

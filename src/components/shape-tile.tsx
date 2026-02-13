@@ -1,7 +1,8 @@
 /**
  * Reusable Shape Tile Component
- * Renders geometric shapes with animations and tap feedback
+ * Renders geometric shapes and Expo icons with animations and tap feedback
  */
+import { Ionicons } from '@expo/vector-icons';
 import React, { memo } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, {
@@ -11,7 +12,7 @@ import Animated, {
     withTiming
 } from 'react-native-reanimated';
 
-type ShapeType = 'circle' | 'square' | 'triangle';
+type ShapeType = 'circle' | 'square' | 'triangle' | 'star' | 'heart' | 'flash' | 'music' | 'diamond' | 'trophy';
 
 interface ShapeTileProps {
   shape: ShapeType;
@@ -79,6 +80,7 @@ const ShapeTile: React.FC<ShapeTileProps> = ({
       backgroundColor: color,
     };
 
+    // Render geometric shapes
     switch (shape) {
       case 'circle':
         return (
@@ -122,6 +124,49 @@ const ShapeTile: React.FC<ShapeTileProps> = ({
           </View>
         );
 
+      // Render Expo vector icons
+      case 'star':
+        return (
+          <View style={[styles.iconContainer, { width: size, height: size }]}>
+            <Ionicons name="star" size={size * 0.9} color={color} />
+          </View>
+        );
+
+      case 'heart':
+        return (
+          <View style={[styles.iconContainer, { width: size, height: size }]}>
+            <Ionicons name="heart" size={size * 0.9} color={color} />
+          </View>
+        );
+
+      case 'flash':
+        return (
+          <View style={[styles.iconContainer, { width: size, height: size }]}>
+            <Ionicons name="flash" size={size * 0.9} color={color} />
+          </View>
+        );
+
+      case 'music':
+        return (
+          <View style={[styles.iconContainer, { width: size, height: size }]}>
+            <Ionicons name="musical-note" size={size * 0.9} color={color} />
+          </View>
+        );
+
+      case 'diamond':
+        return (
+          <View style={[styles.iconContainer, { width: size, height: size }]}>
+            <Ionicons name="diamond" size={size * 0.9} color={color} />
+          </View>
+        );
+
+      case 'trophy':
+        return (
+          <View style={[styles.iconContainer, { width: size, height: size }]}>
+            <Ionicons name="trophy" size={size * 0.9} color={color} />
+          </View>
+        );
+
       default:
         return <View style={[baseStyle, styles.shape]} />;
     }
@@ -160,6 +205,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 3,
     elevation: 3,
+  },
+  iconContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 });
 
