@@ -69,7 +69,7 @@ class PuzzleRegistryClass {
   /**
    * Generates a complete puzzle instance ready to render
    */
-  generatePuzzle(type: PuzzleType, baseSeed: number, index: number, difficulty?: number): PuzzleInstance | null {
+  generatePuzzle(type: PuzzleType, baseSeed: number, index: number, difficulty?: number, streakMilestone?: number): PuzzleInstance | null {
     const generator = this.getGenerator(type);
     if (!generator) {
       console.error(`No generator found for puzzle type: ${type}`);
@@ -77,7 +77,7 @@ class PuzzleRegistryClass {
     }
 
     const seed = generateSeed(baseSeed, index);
-    const definition = generator.generateDefinition(seed, difficulty);
+    const definition = generator.generateDefinition(seed, difficulty, streakMilestone);
     const data = generator.generateData(definition);
 
     return PuzzleFactory.createInstance(definition, data);

@@ -53,13 +53,13 @@ const TUTORIAL_STEPS = [
   },
   {
     title: 'Step 3: Beat the Timer ⏱️',
-    description: 'You must make your choice before the timer runs out! If time expires, you lose your streak.',
+    description: 'You start with 10 seconds. For every 5-streak milestone, your timer reduces by 2 seconds (min 3s). The timer never goes back up!',
     icon: 'timer-sand' as const,
     color: '#f59e0b',
   },
   {
     title: 'Build Your Streak! 🔥',
-    description: 'Each correct answer increases your streak. But fail once, and you lose it all! The game gets harder as you progress.',
+    description: 'Each correct answer increases your streak. Fail once, and you lose it all! Reach 100 streak for a unique shareable card!',
     icon: 'fire' as const,
     color: '#ef4444',
   },

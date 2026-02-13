@@ -226,7 +226,7 @@ export interface FeedbackData {
  * Puzzle generator interface
  */
 export interface PuzzleGenerator<T extends PuzzleConfig = PuzzleConfig> {
-  generateDefinition(seed: number, difficulty?: number): PuzzleDefinition;
+  generateDefinition(seed: number, difficulty?: number, streakMilestone?: number): PuzzleDefinition;
   generateData(definition: PuzzleDefinition): PuzzleCoreData;
 }
 
@@ -245,6 +245,7 @@ export interface SessionStats {
   successCount: number;
   failureCount: number;
   currentStreak: number;
+  maxStreakMilestone: number; // Highest streak milestone reached (for timer reduction)
   averageTime: number;
   startTime: number;
 }

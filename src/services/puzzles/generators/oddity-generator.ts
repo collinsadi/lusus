@@ -13,7 +13,7 @@ import type {
 import { SeededRandom, generateColorPalette } from '../engine/seeded-random';
 
 export class OddityGenerator implements PuzzleGenerator<OddityConfig> {
-  generateDefinition(seed: number, difficulty: number = 0.5): PuzzleDefinition {
+  generateDefinition(seed: number, difficulty: number = 0.5, streakMilestone: number = 0): PuzzleDefinition {
     const random = new SeededRandom(seed);
 
     // Difficulty affects grid size (3x3 to 5x5)

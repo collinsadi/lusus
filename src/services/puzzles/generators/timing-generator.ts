@@ -13,7 +13,7 @@ import type {
 import { SeededRandom } from '../engine/seeded-random';
 
 export class TimingGenerator implements PuzzleGenerator<TimingConfig> {
-  generateDefinition(seed: number, difficulty: number = 0.5): PuzzleDefinition {
+  generateDefinition(seed: number, difficulty: number = 0.5, streakMilestone: number = 0): PuzzleDefinition {
     const random = new SeededRandom(seed);
 
     // Difficulty affects speed and tolerance

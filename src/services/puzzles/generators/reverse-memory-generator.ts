@@ -17,13 +17,13 @@ import { SeededRandom, generateColorPalette } from '../engine/seeded-random';
 type VisualElement = 'circle' | 'square' | 'triangle' | 'star' | 'heart' | 'flash' | 'music' | 'diamond' | 'trophy';
 
 export class ReverseMemoryGenerator implements PuzzleGenerator<ReverseMemoryConfig> {
-  generateDefinition(seed: number, difficulty: number = 0.5): PuzzleDefinition {
+  generateDefinition(seed: number, difficulty: number = 0.5, streakMilestone: number = 0): PuzzleDefinition {
     const random = new SeededRandom(seed);
     
     // Use round number from seed to calculate difficulty
     // This allows difficulty to scale naturally with progression
     const roundNumber = Math.floor(seed / 1000) % 100;
-    const difficultyParams = PuzzleDifficultyController.calculateDifficulty(roundNumber, difficulty);
+    const difficultyParams = PuzzleDifficultyController.calculateDifficulty(roundNumber, difficulty, streakMilestone);
 
     const config: ReverseMemoryConfig = {
       seed,

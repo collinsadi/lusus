@@ -44,13 +44,14 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
     successCount: 0,
     failureCount: 0,
     currentStreak: 0,
+    maxStreakMilestone: 0,
     averageTime: 0,
     startTime: Date.now(),
   });
 
   // Generate a fresh random puzzle
   const generateNextPuzzle = useCallback(
-    (totalSolved: number, currentStreak: number): PuzzleInstance | null => {
+    (totalSolved: number, currentStreak: number, maxStreakMilestone: number): PuzzleInstance | null => {
       // Use ReverseMemory as primary puzzle type
       // Base difficulty increases gradually with total puzzles solved
       const baseDifficulty = Math.min(0.3 + (totalSolved * 0.03), 0.7);
@@ -64,7 +65,7 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
       
       // Generate a unique seed for each puzzle using current timestamp
       const seed = Date.now() + Math.random() * 1000000;
-      return PuzzleRegistry.generatePuzzle(PuzzleType.REVERSE_MEMORY, seed, 0, difficulty);
+      return PuzzleRegistry.generatePuzzle(PuzzleType.REVERSE_MEMORY, seed, 0, difficulty, maxStreakMilestone);
     },
     []
   );
@@ -73,8 +74,8 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
   const initialize = useCallback(() => {
     if (isInitialized) return;
     
-    const firstPuzzle = generateNextPuzzle(0, 0);
-    const secondPuzzle = generateNextPuzzle(0, 0);
+    const firstPuzzle = generateNextPuzzle(0, 0, 0);
+    const secondPuzzle = generateNextPuzzle(0, 0, 0);
     
     setCurrentPuzzle(firstPuzzle);
     setNextPuzzle(secondPuzzle);
@@ -89,6 +90,10 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
       }
 
       setIsEvaluating(true);
+
+      // Check if this is a timeout (no actual user interaction)
+      // Timeout is indicated by itemId: -1
+      const isTimeout = interaction.data.itemId === -1;
 
       // Get evaluator for current puzzle type
       const evaluator = PuzzleRegistry.getEvaluator(currentPuzzle.definition.type);
@@ -111,11 +116,26 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
       setCurrentPuzzle(updatedPuzzle);
 
       // Update session stats
+      // Only count as "Solved" if user actually attempted it (not a timeout)
       setSessionStats((prev) => {
+        if (isTimeout) {
+          // For timeouts: just reset streak, don't count as solved
+          return {
+            ...prev,
+            currentStreak: 0,
+          };
+        }
+
+        // Regular interaction: count as solved
         const newTotal = prev.totalPuzzles + 1;
         const newSuccess = prev.successCount + (result.success ? 1 : 0);
         const newFailure = prev.failureCount + (result.success ? 0 : 1);
         const newStreak = result.success ? prev.currentStreak + 1 : 0;
+        
+        // Calculate streak milestone (how many 5-streak milestones reached)
+        const newStreakMilestone = Math.floor(newStreak / 5);
+        // Update maxStreakMilestone only if new milestone is higher
+        const newMaxStreakMilestone = Math.max(prev.maxStreakMilestone, newStreakMilestone);
         
         const totalTime = prev.averageTime * prev.totalPuzzles + result.timeTaken;
         const newAverage = totalTime / newTotal;
@@ -125,6 +145,7 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
           successCount: newSuccess,
           failureCount: newFailure,
           currentStreak: newStreak,
+          maxStreakMilestone: newMaxStreakMilestone,
           averageTime: newAverage,
           startTime: prev.startTime,
         };
@@ -142,26 +163,28 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
     // Generate a fresh puzzle based on current progress and streak
     const newNextPuzzle = generateNextPuzzle(
       sessionStats.totalPuzzles + 1,
-      sessionStats.currentStreak
+      sessionStats.currentStreak,
+      sessionStats.maxStreakMilestone
     );
 
     setCurrentPuzzle(nextPuzzle);
     setNextPuzzle(newNextPuzzle);
     setLastResult(null);
-  }, [nextPuzzle, sessionStats.totalPuzzles, sessionStats.currentStreak, generateNextPuzzle]);
+  }, [nextPuzzle, sessionStats.totalPuzzles, sessionStats.currentStreak, sessionStats.maxStreakMilestone, generateNextPuzzle]);
 
   // Reset session
   const resetSession = useCallback(() => {
     if (!isInitialized) return;
     
-    setCurrentPuzzle(generateNextPuzzle(0, 0));
-    setNextPuzzle(generateNextPuzzle(0, 0));
+    setCurrentPuzzle(generateNextPuzzle(0, 0, 0));
+    setNextPuzzle(generateNextPuzzle(0, 0, 0));
     setLastResult(null);
     setSessionStats({
       totalPuzzles: 0,
       successCount: 0,
       failureCount: 0,
       currentStreak: 0,
+      maxStreakMilestone: 0,
       averageTime: 0,
       startTime: Date.now(),
     });

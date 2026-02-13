@@ -95,29 +95,35 @@ export default function RulesScreen() {
 
         {/* Tips Section */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Tips</Text>
+          <Text style={styles.sectionTitle}>Tips & Progression</Text>
           <View style={styles.tipItem}>
-            <Text style={styles.tipBullet}>•</Text>
+            <Text style={styles.tipBullet}>⏱️</Text>
             <Text style={styles.tipText}>
-              You start with a 4-second timer that increases by 1 second for every 5-streak milestone you reach
+              You start with a 10-second timer. For every 5-streak milestone reached, your timer reduces by 2 seconds (minimum 3 seconds). The timer never increases, even if you lose your streak!
             </Text>
           </View>
           <View style={styles.tipItem}>
-            <Text style={styles.tipBullet}>•</Text>
+            <Text style={styles.tipBullet}>🧠</Text>
             <Text style={styles.tipText}>
               Pay attention during the memorization phase
             </Text>
           </View>
           <View style={styles.tipItem}>
-            <Text style={styles.tipBullet}>•</Text>
+            <Text style={styles.tipBullet}>📈</Text>
             <Text style={styles.tipText}>
               The difficulty adapts to your performance
             </Text>
           </View>
           <View style={styles.tipItem}>
-            <Text style={styles.tipBullet}>•</Text>
+            <Text style={styles.tipBullet}>👆</Text>
             <Text style={styles.tipText}>
               Swipe to get a new puzzle if you want to skip
+            </Text>
+          </View>
+          <View style={styles.tipItem}>
+            <Text style={styles.tipBullet}>🎁</Text>
+            <Text style={styles.tipText}>
+              Reach a 100-streak to unlock a unique shareable card!
             </Text>
           </View>
         </View>

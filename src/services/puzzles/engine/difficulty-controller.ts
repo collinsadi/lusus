@@ -18,9 +18,10 @@ export class PuzzleDifficultyController {
    * 
    * @param round - Current round number (0-indexed)
    * @param baseDifficulty - Base difficulty multiplier (0-1)
+   * @param streakMilestone - Highest streak milestone reached (affects timer)
    * @returns Difficulty parameters for the round
    */
-  static calculateDifficulty(round: number, baseDifficulty: number = 0.5): DifficultyParams {
+  static calculateDifficulty(round: number, baseDifficulty: number = 0.5, streakMilestone: number = 0): DifficultyParams {
     // Check for relief round (every 5th round is easier)
     const isReliefRound = round > 0 && round % 5 === 0;
     
@@ -28,17 +29,17 @@ export class PuzzleDifficultyController {
       // Relief round: reduce difficulty by 30%
       const reliefMultiplier = 0.7;
       const adjustedRound = Math.max(0, round - 2);
-      return this.computeParams(adjustedRound, baseDifficulty * reliefMultiplier);
+      return this.computeParams(adjustedRound, baseDifficulty * reliefMultiplier, streakMilestone);
     }
 
-    return this.computeParams(round, baseDifficulty);
+    return this.computeParams(round, baseDifficulty, streakMilestone);
   }
 
   /**
    * Computes actual difficulty parameters
    * Uses logarithmic scaling for smooth progression
    */
-  private static computeParams(round: number, difficulty: number): DifficultyParams {
+  private static computeParams(round: number, difficulty: number, streakMilestone: number = 0): DifficultyParams {
     // Logarithmic progression for smooth scaling
     const progressionFactor = Math.log(round + 2) / Math.log(2); // log2(round + 2)
     const scaledDifficulty = Math.min(difficulty * progressionFactor, 1);
@@ -63,10 +64,18 @@ export class PuzzleDifficultyController {
     const minRevealTime = 1200; // Reduced from 1500ms for harder challenge
     const revealDuration = Math.floor(maxRevealTime - (scaledDifficulty * (maxRevealTime - minRevealTime)));
 
-    // Action time limit: 8000ms to 4000ms (less time as difficulty increases)
-    const maxActionTime = 8000;
-    const minActionTime = 4000;
-    const actionTimeLimit = Math.floor(maxActionTime - (scaledDifficulty * (maxActionTime - minActionTime)));
+    // Action time limit: Streak-based timer system
+    // - Starts at 10 seconds (10000ms)
+    // - Reduces by 2 seconds (2000ms) for every 5 streak milestone reached
+    // - Minimum of 3 seconds (3000ms)
+    // - Does not increase if streak is lost
+    const baseActionTime = 10000; // 10 seconds
+    const reductionPerMilestone = 2000; // 2 seconds
+    const minActionTime = 3000; // 3 seconds minimum
+    const actionTimeLimit = Math.max(
+      minActionTime,
+      baseActionTime - (streakMilestone * reductionPerMilestone)
+    );
 
     return {
       sequenceLength: Math.min(sequenceLength, gridSize - 2), // Ensure room for decoys
