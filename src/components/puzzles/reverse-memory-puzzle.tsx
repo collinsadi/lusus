@@ -25,13 +25,15 @@ interface ReverseMemoryPuzzleProps {
   onTap: (itemId: number) => void;
   currentStreak?: number; // Current success streak for speed scaling
   isPaused?: boolean; // Pause all timers and interactions
+  onTimerUpdate?: (timeRemaining: number, timeLimit: number, isActive: boolean) => void; // Timer state callback
 }
 
 const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ 
   data, 
   onTap, 
   currentStreak = 0,
-  isPaused = false
+  isPaused = false,
+  onTimerUpdate
 }) => {
   const [phase, setPhase] = useState<GamePhase>('reveal');
   const [tappedItems, setTappedItems] = useState<Set<number>>(new Set());
@@ -70,6 +72,14 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
   );
 
   const [timeRemaining, setTimeRemaining] = useState<number>(scaledActionTimeLimit);
+
+  // Update parent with timer state
+  useEffect(() => {
+    if (onTimerUpdate) {
+      const isActive = phase === 'action';
+      onTimerUpdate(timeRemaining, scaledActionTimeLimit, isActive);
+    }
+  }, [timeRemaining, scaledActionTimeLimit, phase, onTimerUpdate]);
 
   // Calculate grid dimensions
   const gridDimensions = useMemo(
@@ -300,44 +310,8 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
 
   // Render action phase (player taps decoys)
   const renderActionPhase = () => {
-    const timeProgress = timeRemaining / scaledActionTimeLimit;
-    const timeInSeconds = Math.ceil(timeRemaining / 1000);
-    
-    // Color changes based on time remaining
-    let timerColor = '#4CAF50'; // Green
-    if (timeProgress < 0.3) {
-      timerColor = '#F44336'; // Red
-    } else if (timeProgress < 0.5) {
-      timerColor = '#FF9800'; // Orange
-    }
-    
     return (
       <View style={styles.phaseContainer}>
-        <View style={styles.headerSection}>
-          <Text style={styles.instructionText}>
-            Tap what was NOT in the sequence
-          </Text>
-          
-          {/* Countdown Timer */}
-          <View style={styles.timerContainer}>
-            <View style={styles.timerCircle}>
-              <Text style={[styles.timerText, { color: timerColor }]}>
-                {timeInSeconds}s
-              </Text>
-            </View>
-            <View style={styles.timerProgressBar}>
-              <View
-                style={[
-                  styles.timerProgressFill,
-                  {
-                    width: `${timeProgress * 100}%`,
-                    backgroundColor: timerColor,
-                  },
-                ]}
-              />
-            </View>
-          </View>
-        </View>
         
         <View
           style={[
@@ -410,11 +384,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     width: '100%',
   },
-  headerSection: {
-    alignItems: 'center',
-    marginBottom: 24,
-    width: '100%',
-  },
   instructionText: {
     fontSize: 18,
     fontWeight: '600',
@@ -422,36 +391,6 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     textAlign: 'center',
     letterSpacing: 0.5,
-  },
-  timerContainer: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  timerCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  timerText: {
-    fontSize: 20,
-    fontWeight: '700',
-    letterSpacing: 0.5,
-  },
-  timerProgressBar: {
-    width: 200,
-    height: 6,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: 3,
-    overflow: 'hidden',
-  },
-  timerProgressFill: {
-    height: '100%',
-    borderRadius: 3,
   },
   sequenceContainer: {
     flexDirection: 'row',

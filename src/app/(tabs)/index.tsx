@@ -3,7 +3,7 @@
  * Main feed screen with vertically swipeable puzzle stream
  */
 import React, { useCallback, useEffect, useRef } from 'react';
-import { Dimensions, FlatList, StyleSheet, View, ViewToken, TouchableOpacity } from 'react-native';
+import { Dimensions, FlatList, StyleSheet, Text, View, ViewToken, TouchableOpacity } from 'react-native';
 import {
     useSharedValue
 } from 'react-native-reanimated';
@@ -38,6 +38,13 @@ export default function PuzzleFeedScreen() {
   const { shouldShowTutorial, completeTutorial, skipTutorial, resetTutorial } = useTutorial();
   const { shouldShowSplash } = useSplashContext();
   const [showTutorialOverlay, setShowTutorialOverlay] = React.useState(false);
+  
+  // Timer state for header display
+  const [timerState, setTimerState] = React.useState<{
+    timeRemaining: number;
+    timeLimit: number;
+    isActive: boolean;
+  }>({ timeRemaining: 0, timeLimit: 0, isActive: false });
 
   const flatListRef = useRef<FlatList>(null);
   const scrollY = useSharedValue(0);
@@ -121,6 +128,11 @@ export default function PuzzleFeedScreen() {
     }
   }, [isPuzzleCompleted, lastResult, skipToNext]);
 
+  // Handle timer updates from puzzle
+  const handleTimerUpdate = useCallback((timeRemaining: number, timeLimit: number, isActive: boolean) => {
+    setTimerState({ timeRemaining, timeLimit, isActive });
+  }, []);
+
   const renderPuzzle = useCallback(
     ({ item, index }: { item: any; index: number }) => {
       if (!item) return null;
@@ -132,11 +144,12 @@ export default function PuzzleFeedScreen() {
             onInteraction={handleInteraction}
             currentStreak={sessionStats.currentStreak}
             isPaused={showTutorialOverlay || shouldShowSplash}
+            onTimerUpdate={handleTimerUpdate}
           />
         </View>
       );
     },
-    [handleInteraction, sessionStats.currentStreak, showTutorialOverlay, shouldShowSplash]
+    [handleInteraction, sessionStats.currentStreak, showTutorialOverlay, shouldShowSplash, handleTimerUpdate]
   );
 
   const keyExtractor = useCallback((item: any, index: number) => {
@@ -149,6 +162,7 @@ export default function PuzzleFeedScreen() {
         <StatsDisplay 
           stats={sessionStats} 
           onReset={resetSession}
+          timeRemaining={timerState.isActive ? timerState.timeRemaining : 0}
         />
       </View>
 

@@ -9,24 +9,23 @@ import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 interface StatsDisplayProps {
   stats: SessionStats;
   onReset?: () => void;
+  timeRemaining?: number; // Timer in milliseconds (0 when inactive)
 }
 
-const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, onReset }) => {
-  const successRate = stats.totalPuzzles > 0
-    ? Math.round((stats.successCount / stats.totalPuzzles) * 100)
-    : 0;
-
+const StatsDisplay: React.FC<StatsDisplayProps> = ({ stats, onReset, timeRemaining }) => {
+  const timeInSeconds = timeRemaining ? Math.ceil(timeRemaining / 1000) : 0;
+  
   return (
     <View style={styles.wrapper}>
       <View style={styles.container}>
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{stats.currentStreak}</Text>
-          <Text style={styles.statLabel}>Streak</Text>
+          <Text style={styles.statValue}>{timeInSeconds}s</Text>
+          <Text style={styles.statLabel}>Time</Text>
         </View>
         <View style={styles.separator} />
         <View style={styles.statItem}>
-          <Text style={styles.statValue}>{successRate}%</Text>
-          <Text style={styles.statLabel}>Success</Text>
+          <Text style={styles.statValue}>{stats.currentStreak}</Text>
+          <Text style={styles.statLabel}>Streak</Text>
         </View>
         <View style={styles.separator} />
         <View style={styles.statItem}>
