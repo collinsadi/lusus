@@ -24,6 +24,8 @@ export default function RulesScreen() {
       await Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }
     
+    // Don't initialize here - let tutorial handle it for first-time users
+    // or main screen will initialize for returning users
     dismissSplash();
     router.back();
   };
@@ -48,6 +50,10 @@ export default function RulesScreen() {
             Lusus is a collection of micro puzzles designed to challenge your cognitive abilities. 
             Each puzzle type tests different mental skills like memory, pattern recognition, and visual processing.
           </Text>
+          <Text style={[styles.text, { marginTop: 12, fontStyle: 'italic', color: '#b0b0ba' }]}>
+            💡 First-time players will see a guided tutorial when they start playing. 
+            You can access it anytime by tapping the help icon (?) at the top of the screen.
+          </Text>
         </View>
 
         {/* Puzzle Types */}
@@ -59,8 +65,8 @@ export default function RulesScreen() {
             <View style={styles.puzzleContent}>
               <Text style={styles.puzzleName}>Reverse Memory</Text>
               <Text style={styles.puzzleDescription}>
-                Memorize the sequence, then tap the tiles in reverse order. 
-                Tests your working memory and sequencing abilities.
+                Memorize the shapes shown, then tap a shape that was NOT in the list before the timer runs out. 
+                Tests your working memory and attention to detail.
               </Text>
             </View>
           </View>

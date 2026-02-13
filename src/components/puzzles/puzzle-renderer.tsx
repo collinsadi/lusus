@@ -23,9 +23,10 @@ interface PuzzleRendererProps {
   instance: PuzzleInstance;
   onInteraction: (interaction: UserInteraction) => void;
   currentStreak?: number; // For speed scaling in applicable puzzles
+  isPaused?: boolean; // Pause all timers and interactions
 }
 
-const PuzzleRenderer: React.FC<PuzzleRendererProps> = ({ instance, onInteraction, currentStreak = 0 }) => {
+const PuzzleRenderer: React.FC<PuzzleRendererProps> = ({ instance, onInteraction, currentStreak = 0, isPaused = false }) => {
   const createInteraction = useCallback(
     (type: UserInteraction['type'], data: UserInteraction['data']) => {
       onInteraction({
@@ -77,6 +78,7 @@ const PuzzleRenderer: React.FC<PuzzleRendererProps> = ({ instance, onInteraction
           data={instance.data as ReverseMemoryPuzzleData}
           onTap={(itemId) => createInteraction('tap', { itemId })}
           currentStreak={currentStreak}
+          isPaused={isPaused}
         />
       );
 

@@ -2,17 +2,22 @@
  * Lusus - Micro Puzzles Feed
  * Main feed screen with vertically swipeable puzzle stream
  */
-import React, { useCallback, useRef } from 'react';
-import { Dimensions, FlatList, StyleSheet, View, ViewToken } from 'react-native';
+import React, { useCallback, useEffect, useRef } from 'react';
+import { Dimensions, FlatList, StyleSheet, View, ViewToken, TouchableOpacity } from 'react-native';
 import {
     useSharedValue
 } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import FeedbackOverlay from '@/components/feedback-overlay';
 import PuzzleRenderer from '@/components/puzzles/puzzle-renderer';
 import StatsDisplay from '@/components/stats-display';
+import TutorialOverlay from '@/components/tutorial-overlay';
 import { usePuzzleFeed } from '@/hooks/usePuzzleFeed';
+import { useTutorial } from '@/hooks/useTutorial';
+import { usePuzzle } from '@/context/puzzle-context';
+import { useSplashContext } from '@/context/splash-context';
 
 const { height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -28,9 +33,54 @@ export default function PuzzleFeedScreen() {
     resetSession,
   } = usePuzzleFeed();
 
+  const { isInitialized, initialize } = usePuzzle();
+  const { shouldShowTutorial, completeTutorial, skipTutorial, resetTutorial } = useTutorial();
+  const { shouldShowSplash } = useSplashContext();
+  const [showTutorialOverlay, setShowTutorialOverlay] = React.useState(false);
+
   const flatListRef = useRef<FlatList>(null);
   const scrollY = useSharedValue(0);
   const previousStatsRef = useRef(sessionStats);
+
+  // Determine if we should show tutorial overlay
+  useEffect(() => {
+    // Show tutorial if: not initialized yet AND should show tutorial (first time) AND splash dismissed
+    if (!isInitialized && shouldShowTutorial && !shouldShowSplash) {
+      setShowTutorialOverlay(true);
+    }
+  }, [isInitialized, shouldShowTutorial, shouldShowSplash]);
+
+  // Auto-initialize for returning users (who don't need tutorial)
+  useEffect(() => {
+    // Only initialize if: not initialized AND no tutorial needed AND splash dismissed
+    if (!isInitialized && !shouldShowTutorial && !shouldShowSplash) {
+      // User has already seen tutorial and splash is dismissed, initialize now
+      initialize();
+    }
+  }, [isInitialized, shouldShowTutorial, shouldShowSplash, initialize]);
+
+  // Handler to show tutorial again (for help button)
+  const handleShowTutorial = useCallback(() => {
+    setShowTutorialOverlay(true);
+  }, []);
+
+  // Handlers for tutorial completion (don't initialize again if already initialized)
+  const handleTutorialComplete = useCallback(() => {
+    setShowTutorialOverlay(false);
+    completeTutorial();
+  }, [completeTutorial]);
+
+  const handleTutorialSkip = useCallback(() => {
+    setShowTutorialOverlay(false);
+    skipTutorial();
+  }, [skipTutorial]);
+
+  const handleTutorialInitialize = useCallback(() => {
+    // Only initialize if not already initialized
+    if (!isInitialized) {
+      initialize();
+    }
+  }, [isInitialized, initialize]);
 
   // Create puzzle items for FlatList
   const puzzleItems = [currentPuzzle, nextPuzzle].filter(Boolean);
@@ -80,11 +130,12 @@ export default function PuzzleFeedScreen() {
             instance={item} 
             onInteraction={handleInteraction}
             currentStreak={sessionStats.currentStreak}
+            isPaused={showTutorialOverlay || shouldShowSplash}
           />
         </View>
       );
     },
-    [handleInteraction, sessionStats.currentStreak]
+    [handleInteraction, sessionStats.currentStreak, showTutorialOverlay, shouldShowSplash]
   );
 
   const keyExtractor = useCallback((item: any, index: number) => {
@@ -94,7 +145,10 @@ export default function PuzzleFeedScreen() {
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
       <View style={styles.header}>
-        <StatsDisplay stats={sessionStats} onReset={resetSession} />
+        <StatsDisplay 
+          stats={sessionStats} 
+          onReset={resetSession}
+        />
       </View>
 
       <View style={styles.feedContainer}>
@@ -105,7 +159,7 @@ export default function PuzzleFeedScreen() {
           keyExtractor={keyExtractor}
           pagingEnabled
           showsVerticalScrollIndicator={false}
-          scrollEnabled={isPuzzleCompleted}
+          scrollEnabled={isPuzzleCompleted && !showTutorialOverlay && !shouldShowSplash}
           snapToInterval={SCREEN_HEIGHT}
           decelerationRate="fast"
           onViewableItemsChanged={onViewableItemsChanged}
@@ -122,7 +176,32 @@ export default function PuzzleFeedScreen() {
         />
 
         <FeedbackOverlay result={lastResult} />
+
+        {/* Pause overlay when tutorial or splash is active */}
+        {(showTutorialOverlay || shouldShowSplash) && (
+          <View style={styles.pauseOverlay} pointerEvents="box-only" />
+        )}
       </View>
+
+      {/* Floating help button at bottom */}
+      {isInitialized && !showTutorialOverlay && !shouldShowSplash && (
+        <TouchableOpacity 
+          style={styles.helpButton}
+          onPress={handleShowTutorial}
+          activeOpacity={0.8}
+        >
+          <MaterialCommunityIcons name="help-circle" size={32} color="#ffffff" />
+        </TouchableOpacity>
+      )}
+
+      {/* Tutorial overlay - shows for first-time users or when help button is clicked */}
+      {showTutorialOverlay && (
+        <TutorialOverlay 
+          onComplete={handleTutorialComplete} 
+          onSkip={handleTutorialSkip}
+          onInitialize={handleTutorialInitialize}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -145,5 +224,27 @@ const styles = StyleSheet.create({
     height: SCREEN_HEIGHT - 120,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  pauseOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    zIndex: 999,
+  },
+  helpButton: {
+    position: 'absolute',
+    bottom: 40,
+    right: 24,
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#6366f1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366f1',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.5,
+    shadowRadius: 16,
+    elevation: 12,
+    zIndex: 1000,
   },
 });

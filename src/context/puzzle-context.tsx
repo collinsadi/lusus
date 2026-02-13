@@ -19,6 +19,8 @@ interface PuzzleContextValue {
   sessionStats: SessionStats;
   isEvaluating: boolean;
   lastResult: EvaluationResult | null;
+  isInitialized: boolean;
+  initialize: () => void;
   submitInteraction: (interaction: UserInteraction) => void;
   loadNextPuzzle: () => void;
   resetSession: () => void;
@@ -31,6 +33,7 @@ interface PuzzleProviderProps {
 }
 
 export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
+  const [isInitialized, setIsInitialized] = useState(false);
   const [currentPuzzle, setCurrentPuzzle] = useState<PuzzleInstance | null>(null);
   const [nextPuzzle, setNextPuzzle] = useState<PuzzleInstance | null>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
@@ -66,14 +69,17 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
     []
   );
 
-  // Initialize puzzles on mount
-  useEffect(() => {
+  // Initialize puzzles manually (called after splash dismisses)
+  const initialize = useCallback(() => {
+    if (isInitialized) return;
+    
     const firstPuzzle = generateNextPuzzle(0, 0);
     const secondPuzzle = generateNextPuzzle(0, 0);
     
     setCurrentPuzzle(firstPuzzle);
     setNextPuzzle(secondPuzzle);
-  }, [generateNextPuzzle]);
+    setIsInitialized(true);
+  }, [isInitialized, generateNextPuzzle]);
 
   // Submit interaction and evaluate
   const submitInteraction = useCallback(
@@ -146,6 +152,8 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
 
   // Reset session
   const resetSession = useCallback(() => {
+    if (!isInitialized) return;
+    
     setCurrentPuzzle(generateNextPuzzle(0, 0));
     setNextPuzzle(generateNextPuzzle(0, 0));
     setLastResult(null);
@@ -157,7 +165,7 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
       averageTime: 0,
       startTime: Date.now(),
     });
-  }, [generateNextPuzzle]);
+  }, [isInitialized, generateNextPuzzle]);
 
   const value: PuzzleContextValue = {
     currentPuzzle,
@@ -165,6 +173,8 @@ export const PuzzleProvider: React.FC<PuzzleProviderProps> = ({ children }) => {
     sessionStats,
     isEvaluating,
     lastResult,
+    isInitialized,
+    initialize,
     submitInteraction,
     loadNextPuzzle,
     resetSession,

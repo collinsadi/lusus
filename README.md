@@ -14,6 +14,7 @@ scroll → solve → feedback → scroll → repeat
 ## Features
 
 ### Core Experience
+- **First-Time Tutorial**: Interactive step-by-step guide for new players (can be replayed anytime)
 - **Custom Splash Screen**: Playful entry experience with random motivational notes
 - **Reverse Memory Gameplay**: Fast-paced cognitive challenge testing working memory
 - **Progressive Difficulty**: Smooth scaling with relief rounds to prevent fatigue
@@ -130,6 +131,41 @@ The app features a custom in-app splash screen with:
 const { resetSplash } = useSplashContext();
 // Call resetSplash() to show splash again
 ```
+
+### Tutorial System
+First-time users are guided through the game mechanics with an interactive tutorial:
+
+**Components:**
+- `TutorialOverlay`: 6-step interactive tutorial component with animations
+- `useTutorial`: Hook for managing tutorial state with AsyncStorage persistence
+- Help icon in stats display for replaying the tutorial
+
+**Features:**
+- Shows automatically on first play (after initialization)
+- Explains the core rule: find what's NOT in the sequence before time runs out
+- Skip functionality available at any time
+- Can be replayed via help button (?)
+- State persisted across app sessions
+- Beautiful animations and haptic feedback
+- Progress indicator showing current step
+
+**Tutorial Steps:**
+1. Welcome to Lusus
+2. Step 1: Memorize shapes
+3. Step 2: Find the new one (not in sequence)
+4. Step 3: Beat the timer
+5. Build your streak
+6. Ready to play
+
+**Usage:**
+```typescript
+const { shouldShowTutorial, completeTutorial, skipTutorial, resetTutorial } = useTutorial();
+
+// Reset tutorial for testing
+await resetTutorial();
+```
+
+For detailed documentation, see [TUTORIAL_FEATURE.md](./TUTORIAL_FEATURE.md).
 
 ### Puzzle Engine
 The system is built on a modular architecture with clear separation of concerns:

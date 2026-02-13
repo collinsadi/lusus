@@ -24,12 +24,14 @@ interface ReverseMemoryPuzzleProps {
   data: ReverseMemoryPuzzleData;
   onTap: (itemId: number) => void;
   currentStreak?: number; // Current success streak for speed scaling
+  isPaused?: boolean; // Pause all timers and interactions
 }
 
 const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({ 
   data, 
   onTap, 
-  currentStreak = 0 
+  currentStreak = 0,
+  isPaused = false
 }) => {
   const [phase, setPhase] = useState<GamePhase>('reveal');
   const [tappedItems, setTappedItems] = useState<Set<number>>(new Set());
@@ -37,6 +39,8 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
   const fadeOpacity = useSharedValue(0);
   const instructionOpacity = useSharedValue(1);
   const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const pauseTimeRef = React.useRef<number>(0);
+  const pauseStartRef = React.useRef<number>(0);
 
   // Calculate speed multipliers based on streak
   const speedMultipliers = useMemo(
@@ -136,10 +140,50 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
     }
   }, [phase, scaledRevealDuration, scaledInterferenceDuration, scaledAnimationDuration, fadeOpacity, instructionOpacity, scaledActionTimeLimit, onTap]);
 
+  // Handle pause/resume for action phase timer
+  useEffect(() => {
+    if (phase !== 'action') return;
+
+    if (isPaused) {
+      // Store the current time remaining when paused
+      pauseTimeRef.current = timeRemaining;
+      pauseStartRef.current = Date.now();
+      
+      // Clear the timer
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    } else if (pauseStartRef.current > 0) {
+      // Resume: start new timer with remaining time
+      const startTime = Date.now();
+      const remainingAtPause = pauseTimeRef.current;
+      
+      const countdownInterval = setInterval(() => {
+        const elapsed = Date.now() - startTime;
+        const remaining = Math.max(0, remainingAtPause - elapsed);
+        setTimeRemaining(remaining);
+        
+        if (remaining <= 0) {
+          clearInterval(countdownInterval);
+          setPhase('complete');
+          onTap(-1);
+        }
+      }, 100);
+
+      timerRef.current = countdownInterval;
+      pauseStartRef.current = 0;
+
+      return () => {
+        clearInterval(countdownInterval);
+      };
+    }
+  }, [isPaused, phase, onTap, timeRemaining]);
+
   // Handle tap
   const handleTap = useCallback(
     (itemId: number) => {
-      if (phase !== 'action') return;
+      if (phase !== 'action' || isPaused) return;
       
       // Prevent double-tap
       if (tappedItems.has(itemId)) return;
@@ -317,7 +361,7 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
                   color={item.color}
                   size={itemSize * 0.6}
                   onPress={() => handleTap(item.id)}
-                  disabled={isTapped || phase !== 'action'}
+                  disabled={isTapped || phase !== 'action' || isPaused}
                   animationState={isTapped ? 'pulse' : 'idle'}
                 />
               </View>
