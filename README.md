@@ -6,11 +6,19 @@ An infinite vertical feed of ultra-short interactive puzzles built with Expo, Re
 
 ## Overview
 
-Lusus is a mobile-first puzzle game featuring an infinite stream of micro-puzzles that take 3-8 seconds to solve. Each puzzle requires a single primary interaction (tap, drag, rotate, or timing) with immediate visual and haptic feedback.
+Lusus is a mobile-first puzzle game featuring an infinite stream of cognitive micro-puzzles designed to challenge your memory, pattern recognition, and visual processing skills. Each puzzle is a fast-paced mental challenge with immediate visual and haptic feedback.
+
+**How It Works:**
+- Start with a **10-second timer** per puzzle
+- Build your **streak** by solving puzzles correctly
+- Every **5-streak milestone** reduces your timer by 2 seconds (minimum 3 seconds)
+- The timer **never increases**, even if you break your streak!
+- Puzzles get progressively harder as you improve
+- Swipe to skip any puzzle and get a new one
 
 **Experience Flow:**
 ```
-scroll → solve → feedback → scroll → repeat
+memorize → identify → tap → feedback → repeat
 ```
 
 ## Features
@@ -19,18 +27,22 @@ scroll → solve → feedback → scroll → repeat
 - **First-Time Tutorial**: Interactive step-by-step guide for new players (can be replayed anytime)
 - **Custom Splash Screen**: Playful entry experience with random motivational notes
 - **Reverse Memory Gameplay**: Fast-paced cognitive challenge testing working memory
-- **Progressive Difficulty**: Smooth scaling with relief rounds to prevent fatigue
-- **5 Puzzle Types**: Reverse memory (primary), oddity detection, timing alignment, spatial rotation, and rule switching
-- **Instant Feedback**: Visual animations + haptic responses
-- **Session Statistics**: Track streaks, success rate, and progress
+- **Progressive Timer System**: Start at 10s, reduce by 2s every 5-streak milestone (minimum 3s)
+- **Multiple Puzzle Types**: Reverse Memory (primary), Oddity Detection, with more coming soon
+- **Adaptive Difficulty**: Puzzles automatically scale based on your performance
+- **Instant Feedback**: Visual animations + haptic responses for every interaction
+- **Session Statistics**: Track streaks, success rate, and progress in real-time
+- **Streak Rewards**: Reach a 100-streak to unlock a unique shareable card!
 - **Deterministic Generation**: Seeded puzzles for reproducibility and sharing
 
 ### Multiplayer Features
 - **Real-Time Competition**: Compete with friends via TCP sockets
 - **Room System**: Create or join rooms with unique codes
-- **Customizable Games**: Set target streaks (5-50) and time limits (30-600s)
-- **Live Leaderboards**: See player rankings update in real-time
-- **Victory Cards**: Shareable results cards for winners
+- **Customizable Games**: Set target streaks (5-50) and overall time limits (30-600s)
+- **Live Progress**: See all players' streaks update in real-time
+- **Game End Conditions**: Win by reaching target streak first OR having highest streak when time runs out
+- **Victory Leaderboard**: Modal displays final standings with winner highlighted
+- **Shareable Results**: Share your victory or performance with friends
 - **Local Network Play**: Peer-to-peer gaming on the same Wi-Fi
 - See [MULTIPLAYER.md](./MULTIPLAYER.md) and [MULTIPLAYER_SETUP.md](./MULTIPLAYER_SETUP.md) for complete documentation
 
@@ -82,42 +94,80 @@ lusus/
 └── README.md
 ```
 
+## Gameplay Mechanics
+
+### Timer & Progression
+The game features a unique timer system designed to increase challenge as you improve:
+
+- **Starting Timer**: 10 seconds per puzzle
+- **Streak Milestones**: Every 5 correct answers in a row
+- **Timer Reduction**: -2 seconds per milestone reached
+- **Minimum Timer**: 3 seconds (never goes lower)
+- **Important**: Timer never increases, even if you break your streak
+
+**Example Progression:**
+- Streak 0-4: 10 seconds
+- Streak 5-9: 8 seconds
+- Streak 10-14: 6 seconds
+- Streak 15-19: 4 seconds
+- Streak 20+: 3 seconds (minimum maintained)
+
+### Scoring & Rewards
+Earn points for correct answers based on:
+- **Accuracy**: Get it right on the first try
+- **Difficulty Level**: Harder puzzles = more points
+- **Streak Bonuses**: Build streaks for multiplier bonuses
+- **Speed**: Faster solves contribute to higher scores
+
+**Special Milestone:**
+- 🎁 Reach a **100-streak** to unlock a unique shareable victory card!
+
+### Gameplay Tips
+- 🧠 **Pay attention** during the memorization phase
+- 📈 **Difficulty adapts** to your performance automatically
+- 👆 **Swipe to skip** any puzzle and get a new one
+- ⏱️ **Plan ahead** - the timer gets progressively faster as you build streaks
+- 🏆 **Focus on accuracy** over speed to build consistent streaks
+
 ## Puzzle Types
 
-### 1. **Reverse Memory** (Primary)
-Remember a sequence of shapes, then tap items that were NOT in the original sequence.
-- **Interaction**: Tap decoy items (not in sequence)
-- **Game Flow**: Reveal → Interference → Action → Evaluation
-- **Features**: 
-  - Adaptive difficulty progression
-  - Relief rounds every 5th puzzle
-  - Seeded for replay/sharing
-  - Smooth animations between phases
-- **Difficulty Scaling**:
-  - Sequence length: 2-6 items
-  - Grid size: 6-16 items
-  - Reveal time: 3000-1500ms
-  - Decoy complexity increases
+### 🧩 Reverse Memory (Primary)
+**Objective:** Memorize the shapes shown, then tap a shape that was **NOT** in the list before the timer runs out.
 
-### 2. **Oddity Detection**
-Find the one different item in a grid of shapes.
-- **Interaction**: Tap the anomaly
-- **Variations**: Color, shape, size, or rotation differences
+**How to Play:**
+1. **Memorize Phase**: Watch the shapes that appear
+2. **Interference Phase**: See all shapes mixed together
+3. **Action Phase**: Tap any shape that was NOT in the memorized list
+4. Beat the timer to succeed!
 
-### 3. **Timing Alignment**
-Tap when a moving indicator crosses the target zone.
-- **Interaction**: Tap at the right moment
-- **Variations**: Horizontal, vertical, or circular paths
+**Key Features:**
+- Tests your working memory and attention to detail
+- Adaptive difficulty progression
+- Seeded for replay/sharing
+- Smooth animations between phases
+- Progressive speed increases with streak milestones
 
-### 4. **Spatial Rotation**
-Rotate a shape to match the outline.
-- **Interaction**: Drag-rotate gesture
-- **Variations**: Different shapes with varying tolerances
+**Difficulty Scaling:**
+- Sequence length: 2-6 items
+- Grid size: 6-16 items
+- Reveal time: 3000-1500ms (gets faster with streaks)
+- Decoy complexity increases
 
-### 5. **Rule Switch**
-Tap items matching a rule (color or shape) that switches mid-puzzle.
-- **Interaction**: Tap correct target
-- **Variations**: Different switch timings and decoy densities
+### 🔍 Find the Oddity
+**Objective:** Spot the different shape among similar ones.
+
+**How to Play:**
+- Look at the grid of shapes
+- Find the one that's different
+- Tap it before time runs out!
+
+**Key Features:**
+- Challenges your visual discrimination
+- Tests attention to detail
+- Variations in color, shape, or size
+
+### 🎯 More Coming Soon
+New puzzle types are in development and will be added regularly to keep your brain engaged!
 
 ## Architecture
 
@@ -274,12 +324,20 @@ Quick overview:
 
 ## Technologies
 
+### Frontend (Mobile App)
 - **Expo** - React Native framework
 - **TypeScript** - Type safety
 - **React Native Reanimated** - 60fps animations
 - **React Native Gesture Handler** - Touch interactions
 - **Expo Haptics** - Haptic feedback
 - **Expo Router** - File-based routing
+- **Socket.io Client** - Real-time multiplayer communication
+
+### Backend (Multiplayer Server)
+- **Node.js + Express** - Server framework
+- **Socket.io** - WebSocket-based real-time communication
+- **TypeScript** - Type-safe server code
+- See [MULTIPLAYER_SETUP.md](./MULTIPLAYER_SETUP.md) for server setup
 
 ## Development
 
@@ -296,14 +354,18 @@ npx prettier --write "src/**/*.{ts,tsx}"
 
 ## Future Enhancements
 
-- ✅ **Difficulty Progression**: Implemented with smooth scaling and relief rounds
-- **Daily Challenges**: Curated puzzles with leaderboards
+- ✅ **Difficulty Progression**: Implemented with adaptive scaling
+- ✅ **Progressive Timer System**: Implemented with streak-based reduction
+- ✅ **Multiplayer Mode**: Real-time competitive gameplay with rooms
+- ✅ **100-Streak Milestone**: Shareable card reward system
+- **Daily Challenges**: Curated puzzles with global leaderboards
 - **Puzzle Sharing**: Share specific puzzles via seed (infrastructure ready)
+- **More Puzzle Types**: Expanding beyond Reverse Memory and Oddity Detection
 - **Theme Packs**: Alternate shape sets and color schemes
-- **Multiplayer**: Race mode using challenge seeds
-- **Achievements**: Unlock system for milestones
-- **Sound Design**: Audio feedback and music
+- **Achievements**: Extended unlock system for various milestones
+- **Sound Design**: Audio feedback and background music
 - **Analytics**: Performance tracking and difficulty tuning
+- **Global Leaderboards**: Compare your best streaks worldwide
 
 ## License
 

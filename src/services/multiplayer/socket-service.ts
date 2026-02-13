@@ -15,7 +15,7 @@ import {
 
 type MessageHandler = (message: SocketMessage) => void;
 
-const BACKEND_URL = 'https://de4b-102-88-115-164.ngrok-free.app';
+const BACKEND_URL = 'https://lusus-server.collinsadi.xyz';
 
 class SocketService {
   private socket: Socket | null = null;
