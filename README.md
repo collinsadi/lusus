@@ -1,50 +1,248 @@
-# Welcome to your Expo app 👋
+# Lusus - Micro Puzzles Feed
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+An infinite vertical feed of ultra-short interactive puzzles built with Expo, React Native, and TypeScript.
 
-## Get started
+## Overview
 
-1. Install dependencies
+Lusus is a mobile-first puzzle game featuring an infinite stream of micro-puzzles that take 3-8 seconds to solve. Each puzzle requires a single primary interaction (tap, drag, rotate, or timing) with immediate visual and haptic feedback.
 
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+**Experience Flow:**
+```
+scroll → solve → feedback → scroll → repeat
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Features
 
-## Learn more
+### Core Experience
+- **Reverse Memory Gameplay**: Fast-paced cognitive challenge testing working memory
+- **Progressive Difficulty**: Smooth scaling with relief rounds to prevent fatigue
+- **5 Puzzle Types**: Reverse memory (primary), oddity detection, timing alignment, spatial rotation, and rule switching
+- **Instant Feedback**: Visual animations + haptic responses
+- **Session Statistics**: Track streaks, success rate, and progress
+- **Deterministic Generation**: Seeded puzzles for reproducibility and sharing
 
-To learn more about developing your project with Expo, look at the following resources:
+### Technical Highlights
+- **Scalable Architecture**: Easy to add new puzzle types
+- **Performance Optimized**: 60fps animations, view recycling, lazy loading
+- **Type-Safe**: Full TypeScript with strict typing
+- **Modern UI/UX**: React Native Reanimated for smooth animations
+- **Haptic Feedback**: Native haptic integration via Expo Haptics
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Getting Started
 
-## Join the community
+### Prerequisites
+- Node.js 18+ 
+- Expo CLI
+- iOS Simulator or Android Emulator (or physical device)
 
-Join our community of developers creating universal apps.
+### Installation
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+
+# Run on iOS
+npm run ios
+
+# Run on Android
+npm run android
+```
+
+### Project Structure
+
+```
+lusus/
+├── src/
+│   ├── types/              # TypeScript definitions
+│   ├── services/
+│   │   └── puzzles/        # Puzzle engine, generators, evaluators
+│   ├── components/
+│   │   ├── puzzles/        # Puzzle renderers
+│   │   └── ...             # UI components
+│   ├── context/            # React context for state
+│   ├── hooks/              # Custom React hooks
+│   └── app/                # Expo Router screens
+├── PUZZLES.md              # Detailed puzzle architecture docs
+└── README.md
+```
+
+## Puzzle Types
+
+### 1. **Reverse Memory** (Primary)
+Remember a sequence of shapes, then tap items that were NOT in the original sequence.
+- **Interaction**: Tap decoy items (not in sequence)
+- **Game Flow**: Reveal → Interference → Action → Evaluation
+- **Features**: 
+  - Adaptive difficulty progression
+  - Relief rounds every 5th puzzle
+  - Seeded for replay/sharing
+  - Smooth animations between phases
+- **Difficulty Scaling**:
+  - Sequence length: 2-6 items
+  - Grid size: 6-16 items
+  - Reveal time: 3000-1500ms
+  - Decoy complexity increases
+
+### 2. **Oddity Detection**
+Find the one different item in a grid of shapes.
+- **Interaction**: Tap the anomaly
+- **Variations**: Color, shape, size, or rotation differences
+
+### 3. **Timing Alignment**
+Tap when a moving indicator crosses the target zone.
+- **Interaction**: Tap at the right moment
+- **Variations**: Horizontal, vertical, or circular paths
+
+### 4. **Spatial Rotation**
+Rotate a shape to match the outline.
+- **Interaction**: Drag-rotate gesture
+- **Variations**: Different shapes with varying tolerances
+
+### 5. **Rule Switch**
+Tap items matching a rule (color or shape) that switches mid-puzzle.
+- **Interaction**: Tap correct target
+- **Variations**: Different switch timings and decoy densities
+
+## Architecture
+
+### Puzzle Engine
+The system is built on a modular architecture with clear separation of concerns:
+
+```
+┌─────────────────────────────────────────┐
+│         Puzzle Registry                 │
+│  (Central hub for all puzzle types)     │
+└─────────────────────────────────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+┌───────────────┐      ┌───────────────┐
+│  Generators   │      │  Evaluators   │
+│  (Create)     │      │  (Judge)      │
+└───────────────┘      └───────────────┘
+        │                       │
+        └───────────┬───────────┘
+                    ▼
+        ┌───────────────────────┐
+        │   Puzzle Instance     │
+        │   (Definition + Data) │
+        └───────────────────────┘
+                    │
+                    ▼
+        ┌───────────────────────┐
+        │   Puzzle Renderer     │
+        │   (Visual Component)  │
+        └───────────────────────┘
+```
+
+### Key Components
+
+**PuzzleRegistry**
+- Central hub managing all puzzle types
+- Maps types to generators and evaluators
+- Provides puzzle instantiation
+
+**Generators**
+- Implement `PuzzleGenerator` interface
+- Generate puzzle definitions from seeds
+- Create deterministic puzzle data
+
+**Evaluators**
+- Extend `BasePuzzleEvaluator`
+- Judge user interactions
+- Return success/failure with feedback data
+
+**Renderers**
+- React Native components
+- Render puzzle UI
+- Handle user interactions
+
+**PuzzleContext**
+- Manages puzzle queue
+- Tracks session statistics
+- Handles state transitions
+
+### Seeded Generation
+
+All puzzles use a deterministic random number generator (Mulberry32):
+```typescript
+const puzzle = PuzzleRegistry.generatePuzzle(type, baseSeed, index);
+// Same seed + index = same puzzle every time
+```
+
+This enables:
+- Reproducible puzzles
+- Puzzle sharing via seed
+- Consistent difficulty progression
+
+## Performance
+
+### Optimizations
+- **Memoized Components**: Prevent unnecessary re-renders
+- **FlatList Recycling**: Efficient view recycling for infinite scroll
+- **Lazy Instantiation**: Puzzles generated on-demand
+- **Prefetching**: Next puzzle preloaded for smooth transitions
+
+### Animation Performance
+- React Native Reanimated for 60fps animations
+- Worklet-based animations (runs on UI thread)
+- Spring physics for natural motion
+
+## Adding New Puzzles
+
+See [PUZZLES.md](./PUZZLES.md) for detailed instructions on adding new puzzle types.
+
+Quick overview:
+1. Define types in `src/types/puzzle.ts`
+2. Create generator in `src/services/puzzles/generators/`
+3. Create evaluator in `src/services/puzzles/evaluators/`
+4. Create renderer in `src/components/puzzles/`
+5. Register in `puzzle-registry.ts` and `puzzle-renderer.tsx`
+
+## Technologies
+
+- **Expo** - React Native framework
+- **TypeScript** - Type safety
+- **React Native Reanimated** - 60fps animations
+- **React Native Gesture Handler** - Touch interactions
+- **Expo Haptics** - Haptic feedback
+- **Expo Router** - File-based routing
+
+## Development
+
+```bash
+# Lint code
+npm run lint
+
+# Type check
+npx tsc --noEmit
+
+# Format code
+npx prettier --write "src/**/*.{ts,tsx}"
+```
+
+## Future Enhancements
+
+- ✅ **Difficulty Progression**: Implemented with smooth scaling and relief rounds
+- **Daily Challenges**: Curated puzzles with leaderboards
+- **Puzzle Sharing**: Share specific puzzles via seed (infrastructure ready)
+- **Theme Packs**: Alternate shape sets and color schemes
+- **Multiplayer**: Race mode using challenge seeds
+- **Achievements**: Unlock system for milestones
+- **Sound Design**: Audio feedback and music
+- **Analytics**: Performance tracking and difficulty tuning
+
+## License
+
+MIT
+
+## Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+---
+
+**Built with ❤️ for puzzle enthusiasts**
