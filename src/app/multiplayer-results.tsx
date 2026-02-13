@@ -2,7 +2,7 @@
  * Multiplayer Results Screen
  * Shows winner and shareable victory card
  */
-import React, { useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,10 +18,18 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useMultiplayer } from '@/context/multiplayer-context';
 import { captureRef } from 'react-native-view-shot';
+import { socketService } from '@/services/multiplayer/socket-service';
 
 export default function MultiplayerResultsScreen() {
-  const { gameResult, localPlayer, leaveRoom } = useMultiplayer();
+  const { gameResult, localPlayer, leaveRoom, resetGame, currentRoom } = useMultiplayer();
   const victoryCardRef = useRef<View>(null);
+
+  // Navigate back to lobby if game is reset
+  useEffect(() => {
+    if (!gameResult && currentRoom) {
+      router.replace('/multiplayer-lobby');
+    }
+  }, [gameResult, currentRoom]);
 
   if (!gameResult || !localPlayer) {
     return (
@@ -66,11 +74,14 @@ export default function MultiplayerResultsScreen() {
 
   // Handle rematch
   const handleRematch = () => {
-    Alert.alert(
-      'Rematch',
-      'Rematch functionality coming soon! For now, create a new room.',
-      [{ text: 'OK' }]
-    );
+    if (!currentRoom) return;
+    
+    // Request rematch via socket (server will broadcast to all players)
+    socketService.requestRematch();
+    resetGame();
+    
+    // Navigate back to lobby
+    router.replace('/multiplayer-lobby');
   };
 
   return (

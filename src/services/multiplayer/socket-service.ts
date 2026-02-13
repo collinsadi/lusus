@@ -1,8 +1,8 @@
 /**
- * TCP Socket Service for Multiplayer
+ * Socket.IO Service for Multiplayer
  * Handles real-time communication between players
  */
-import TcpSocket from 'react-native-tcp-socket';
+import { io, Socket } from 'socket.io-client';
 import {
   MessageType,
   type SocketMessage,
@@ -14,50 +14,155 @@ import {
 } from '@/types/multiplayer';
 
 type MessageHandler = (message: SocketMessage) => void;
-type Socket = ReturnType<typeof TcpSocket.createConnection>;
+
+const BACKEND_URL = 'https://de4b-102-88-115-164.ngrok-free.app';
 
 class SocketService {
   private socket: Socket | null = null;
   private messageHandlers: Set<MessageHandler> = new Set();
-  private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectDelay = 2000;
-  private isConnecting = false;
-
-  // For demo purposes, we'll simulate a server
-  // In production, you'd connect to a real server
-  private isServer = false;
-  private serverSocket: any = null;
-  private connectedClients: Map<string, Socket> = new Map();
   private currentRoom: MultiplayerRoom | null = null;
+  private isConnected = false;
+  private progressQueue: GameProgress[] = [];
+  private isSendingProgress = false;
 
   /**
-   * Create a new room (act as server)
+   * Initialize socket connection
+   */
+  private initializeSocket(): void {
+    if (this.socket) return;
+
+    this.socket = io(BACKEND_URL, {
+      transports: ['websocket', 'polling'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+
+    this.setupSocketListeners();
+  }
+
+  /**
+   * Setup socket event listeners
+   */
+  private setupSocketListeners(): void {
+    if (!this.socket) return;
+
+    this.socket.on('connect', () => {
+      console.log('Connected to server');
+      this.isConnected = true;
+    });
+
+    this.socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+      this.isConnected = false;
+    });
+
+    this.socket.on('room_update', ({ room }: { room: MultiplayerRoom }) => {
+      console.log('Room update received:', room);
+      this.currentRoom = room;
+      this.notifyHandlers({
+        type: MessageType.ROOM_UPDATE,
+        data: { room },
+        timestamp: Date.now(),
+      });
+    });
+
+    this.socket.on('settings_updated', ({ settings }: { settings: RoomSettings }) => {
+      console.log('Settings updated:', settings);
+      if (this.currentRoom) {
+        this.currentRoom.settings = settings;
+      }
+      this.notifyHandlers({
+        type: MessageType.UPDATE_SETTINGS,
+        data: { settings },
+        timestamp: Date.now(),
+      });
+    });
+
+    this.socket.on('game_starting', ({ roomId, settings }: { roomId: string; settings: RoomSettings | null }) => {
+      console.log('Game starting:', roomId);
+      if (this.currentRoom) {
+        this.currentRoom.status = 'starting';
+      }
+      this.notifyHandlers({
+        type: MessageType.START_GAME,
+        data: { roomId, settings },
+        timestamp: Date.now(),
+      });
+    });
+
+    this.socket.on('game_started', () => {
+      console.log('Game started');
+      if (this.currentRoom) {
+        this.currentRoom.status = 'playing';
+      }
+      this.notifyHandlers({
+        type: MessageType.GAME_STARTED,
+        data: {},
+        timestamp: Date.now(),
+      });
+    });
+
+    this.socket.on('player_progress', ({ playerId, progress }: { playerId: string; progress: GameProgress }) => {
+      console.log('Player progress:', playerId, progress);
+      this.notifyHandlers({
+        type: MessageType.PROGRESS_UPDATE,
+        data: { playerId, progress },
+        timestamp: Date.now(),
+      });
+    });
+
+    this.socket.on('game_finished', ({ result }: { result: GameResult }) => {
+      console.log('Game finished:', result);
+      if (this.currentRoom) {
+        this.currentRoom.status = 'finished';
+      }
+      this.notifyHandlers({
+        type: MessageType.GAME_FINISHED,
+        data: { result },
+        timestamp: Date.now(),
+      });
+    });
+
+    this.socket.on('game_reset', () => {
+      console.log('Game reset');
+      if (this.currentRoom) {
+        this.currentRoom.status = 'waiting';
+      }
+      this.notifyHandlers({
+        type: MessageType.GAME_RESET,
+        data: {},
+        timestamp: Date.now(),
+      });
+    });
+
+    this.socket.on('connect_error', (error) => {
+      console.error('Connection error:', error);
+    });
+  }
+
+  /**
+   * Create a new room
    */
   async createRoom(hostPlayer: Omit<PlayerInfo, 'isHost' | 'isReady'>): Promise<string> {
-    const roomId = this.generateRoomId();
-    
-    // Initialize room
-    this.currentRoom = {
-      id: roomId,
-      hostId: hostPlayer.id,
-      players: [{
-        ...hostPlayer,
-        isHost: true,
-        isReady: false,
-      }],
-      settings: null,
-      status: 'waiting',
-      createdAt: Date.now(),
-    };
+    this.initializeSocket();
 
-    this.isServer = true;
-    
-    // In a real implementation, start a TCP server
-    // For now, we'll simulate local room management
-    console.log('Room created:', roomId);
-    
-    return roomId;
+    return new Promise((resolve, reject) => {
+      if (!this.socket) {
+        reject(new Error('Socket not initialized'));
+        return;
+      }
+
+      this.socket.emit('create_room', { playerInfo: hostPlayer }, (response: any) => {
+        if (response.success) {
+          this.currentRoom = response.room;
+          console.log('Room created:', response.roomId);
+          resolve(response.roomId);
+        } else {
+          reject(new Error(response.error || 'Failed to create room'));
+        }
+      });
+    });
   }
 
   /**
@@ -65,77 +170,25 @@ class SocketService {
    */
   async joinRoom(
     roomId: string,
-    playerInfo: Omit<PlayerInfo, 'isHost' | 'isReady'>,
-    host: string,
-    port: number
+    playerInfo: Omit<PlayerInfo, 'isHost' | 'isReady'>
   ): Promise<void> {
-    if (this.socket) {
-      this.disconnect();
-    }
-
-    this.isConnecting = true;
+    this.initializeSocket();
 
     return new Promise((resolve, reject) => {
-      try {
-        // Create TCP socket connection
-        this.socket = TcpSocket.createConnection(
-          {
-            host,
-            port,
-            reuseAddress: true,
-          },
-          () => {
-            console.log('Connected to room:', roomId);
-            this.isConnecting = false;
-            this.reconnectAttempts = 0;
-
-            // Send join message
-            this.sendMessage({
-              type: MessageType.JOIN_ROOM,
-              data: { roomId, playerInfo },
-              timestamp: Date.now(),
-            });
-
-            resolve();
-          }
-        );
-
-        // Handle incoming data
-        this.socket.on('data', (data: any) => {
-          try {
-            const message: SocketMessage = JSON.parse(data.toString());
-            this.handleMessage(message);
-          } catch (error) {
-            console.error('Failed to parse message:', error);
-          }
-        });
-
-        // Handle errors
-        this.socket.on('error', (error: any) => {
-          console.error('Socket error:', error);
-          this.isConnecting = false;
-          
-          if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.attemptReconnect(roomId, playerInfo, host, port);
-          } else {
-            reject(error);
-          }
-        });
-
-        // Handle disconnection
-        this.socket.on('close', () => {
-          console.log('Socket closed');
-          this.isConnecting = false;
-          
-          if (this.reconnectAttempts < this.maxReconnectAttempts) {
-            this.attemptReconnect(roomId, playerInfo, host, port);
-          }
-        });
-
-      } catch (error) {
-        this.isConnecting = false;
-        reject(error);
+      if (!this.socket) {
+        reject(new Error('Socket not initialized'));
+        return;
       }
+
+      this.socket.emit('join_room', { roomId, playerInfo }, (response: any) => {
+        if (response.success) {
+          this.currentRoom = response.room;
+          console.log('Joined room:', roomId);
+          resolve();
+        } else {
+          reject(new Error(response.error || 'Failed to join room'));
+        }
+      });
     });
   }
 
@@ -144,45 +197,33 @@ class SocketService {
    */
   disconnect(): void {
     if (this.socket) {
-      this.socket.destroy();
+      this.socket.emit('leave_room');
+      this.socket.disconnect();
       this.socket = null;
     }
     
-    if (this.serverSocket) {
-      this.serverSocket.close();
-      this.serverSocket = null;
-    }
-    
-    this.connectedClients.clear();
     this.currentRoom = null;
-    this.isServer = false;
-    this.isConnecting = false;
-    this.reconnectAttempts = 0;
+    this.isConnected = false;
+    this.messageHandlers.clear();
+    this.progressQueue = [];
+    this.isSendingProgress = false;
   }
 
   /**
    * Set player ready status
    */
   setReady(isReady: boolean): void {
-    this.sendMessage({
-      type: MessageType.SET_READY,
-      data: { isReady },
-      timestamp: Date.now(),
-    });
+    if (this.socket) {
+      this.socket.emit('set_ready', { isReady });
+    }
   }
 
   /**
    * Update room settings (host only)
    */
   updateSettings(settings: RoomSettings): void {
-    if (this.isServer && this.currentRoom) {
-      this.currentRoom.settings = settings;
-      
-      this.broadcastMessage({
-        type: MessageType.UPDATE_SETTINGS,
-        data: { settings },
-        timestamp: Date.now(),
-      });
+    if (this.socket) {
+      this.socket.emit('update_settings', { settings });
     }
   }
 
@@ -190,53 +231,73 @@ class SocketService {
    * Start the game (host only)
    */
   startGame(): void {
-    if (this.isServer && this.currentRoom) {
-      this.currentRoom.status = 'starting';
-      
-      this.broadcastMessage({
-        type: MessageType.START_GAME,
-        data: { 
-          roomId: this.currentRoom.id,
-          settings: this.currentRoom.settings,
-        },
-        timestamp: Date.now(),
-      });
-
-      // Move to playing state
-      setTimeout(() => {
-        if (this.currentRoom) {
-          this.currentRoom.status = 'playing';
-          this.broadcastMessage({
-            type: MessageType.GAME_STARTED,
-            data: {},
-            timestamp: Date.now(),
-          });
-        }
-      }, 3000);
+    if (this.socket) {
+      this.socket.emit('start_game');
     }
   }
 
   /**
-   * Send progress update
+   * Send progress update (non-blocking with queue and retry)
    */
   sendProgress(progress: GameProgress): void {
-    this.sendMessage({
-      type: MessageType.PROGRESS_UPDATE,
-      data: { progress },
-      timestamp: Date.now(),
-    });
+    // Add to queue immediately (never blocks)
+    this.progressQueue.push(progress);
+    
+    // Process queue asynchronously
+    this.processProgressQueue();
+  }
+
+  /**
+   * Process progress queue in background with retry logic
+   */
+  private async processProgressQueue(): Promise<void> {
+    // Prevent concurrent processing
+    if (this.isSendingProgress || this.progressQueue.length === 0) {
+      return;
+    }
+
+    this.isSendingProgress = true;
+
+    // Use setTimeout to ensure this is truly async and non-blocking
+    setTimeout(() => {
+      try {
+        if (!this.socket || !this.socket.connected) {
+          // Socket not ready, will retry on next call
+          this.isSendingProgress = false;
+          return;
+        }
+
+        // Get latest progress (batch updates, only send most recent)
+        const latestProgress = this.progressQueue[this.progressQueue.length - 1];
+        this.progressQueue = []; // Clear queue
+
+        // Emit without waiting for acknowledgment (fire and forget)
+        this.socket.emit('progress_update', { progress: latestProgress });
+        
+        this.isSendingProgress = false;
+      } catch (error) {
+        console.log('Progress send failed, will retry:', error);
+        this.isSendingProgress = false;
+        // Items stay in queue for next attempt
+      }
+    }, 0);
   }
 
   /**
    * Announce game finished
    */
   finishGame(result: GameResult): void {
-    if (this.isServer) {
-      this.broadcastMessage({
-        type: MessageType.GAME_FINISHED,
-        data: { result },
-        timestamp: Date.now(),
-      });
+    if (this.socket) {
+      this.socket.emit('game_finished', { result });
+    }
+  }
+
+  /**
+   * Request rematch (return to lobby)
+   */
+  requestRematch(): void {
+    if (this.socket) {
+      this.socket.emit('request_rematch');
     }
   }
 
@@ -257,147 +318,14 @@ class SocketService {
 
   // Private methods
 
-  private sendMessage(message: SocketMessage): void {
-    if (this.socket) {
-      const data = JSON.stringify(message);
-      this.socket.write(data);
-    } else if (this.isServer) {
-      // If we're the server, broadcast to clients
-      this.broadcastMessage(message);
-    }
-  }
-
-  private broadcastMessage(message: SocketMessage): void {
-    if (this.isServer) {
-      const data = JSON.stringify(message);
-      this.connectedClients.forEach((client) => {
-        try {
-          client.write(data);
-        } catch (error) {
-          console.error('Failed to send to client:', error);
-        }
-      });
-      
-      // Also notify local handlers
-      this.handleMessage(message);
-    }
-  }
-
-  private handleMessage(message: SocketMessage): void {
-    console.log('Received message:', message.type);
-    
-    // Process message based on type
-    switch (message.type) {
-      case MessageType.JOIN_ROOM:
-        this.handlePlayerJoin(message);
-        break;
-        
-      case MessageType.PLAYER_LEFT:
-        this.handlePlayerLeft(message);
-        break;
-        
-      case MessageType.SET_READY:
-        this.handleSetReady(message);
-        break;
-        
-      case MessageType.UPDATE_SETTINGS:
-        if (!this.isServer) {
-          // Update local room settings
-          if (this.currentRoom) {
-            this.currentRoom.settings = message.data.settings;
-          }
-        }
-        break;
-    }
-    
-    // Notify all handlers
+  private notifyHandlers(message: SocketMessage): void {
     this.messageHandlers.forEach((handler) => {
       try {
         handler(message);
-      } catch (error) {
-        console.error('Message handler error:', error);
+      } catch (error: any) {
+        console.error('Message Handler Error:', error);
       }
     });
-  }
-
-  private handlePlayerJoin(message: SocketMessage): void {
-    if (this.isServer && this.currentRoom) {
-      const { playerInfo } = message.data;
-      
-      // Add player to room
-      this.currentRoom.players.push({
-        ...playerInfo,
-        isHost: false,
-        isReady: false,
-      });
-      
-      // Broadcast room update
-      this.broadcastMessage({
-        type: MessageType.ROOM_UPDATE,
-        data: { room: this.currentRoom },
-        timestamp: Date.now(),
-      });
-    }
-  }
-
-  private handlePlayerLeft(message: SocketMessage): void {
-    if (this.isServer && this.currentRoom) {
-      const { playerId } = message.data;
-      
-      this.currentRoom.players = this.currentRoom.players.filter(
-        (p) => p.id !== playerId
-      );
-      
-      // Broadcast room update
-      this.broadcastMessage({
-        type: MessageType.ROOM_UPDATE,
-        data: { room: this.currentRoom },
-        timestamp: Date.now(),
-      });
-    }
-  }
-
-  private handleSetReady(message: SocketMessage): void {
-    if (this.isServer && this.currentRoom) {
-      const { isReady } = message.data;
-      const playerId = message.senderId;
-      
-      const player = this.currentRoom.players.find((p) => p.id === playerId);
-      if (player) {
-        player.isReady = isReady;
-        
-        // Broadcast room update
-        this.broadcastMessage({
-          type: MessageType.ROOM_UPDATE,
-          data: { room: this.currentRoom },
-          timestamp: Date.now(),
-        });
-      }
-    }
-  }
-
-  private attemptReconnect(
-    roomId: string,
-    playerInfo: Omit<PlayerInfo, 'isHost' | 'isReady'>,
-    host: string,
-    port: number
-  ): void {
-    this.reconnectAttempts++;
-    console.log(`Reconnecting... Attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-    
-    setTimeout(() => {
-      this.joinRoom(roomId, playerInfo, host, port).catch(console.error);
-    }, this.reconnectDelay * this.reconnectAttempts);
-  }
-
-  private generateRoomId(): string {
-    // Generate a 6-character room ID
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let result = '';
-    for (let i = 0; i < 6; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
-    return result;
   }
 }
 

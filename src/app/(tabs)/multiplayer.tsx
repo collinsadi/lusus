@@ -20,7 +20,6 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useMultiplayer } from '@/context/multiplayer-context';
 import { PLAYER_EMOJIS } from '@/types/multiplayer';
-import { getLocalIpAddress, isConnectedToNetwork, getNetworkType } from '@/utils/network';
 
 const { width } = Dimensions.get('window');
 
@@ -31,35 +30,9 @@ export default function MultiplayerLobbyScreen() {
   const [username, setUsername] = useState('');
   const [selectedEmoji, setSelectedEmoji] = useState('😎');
   const [roomId, setRoomId] = useState('');
-  const [serverHost, setServerHost] = useState('');
-  const [serverPort, setServerPort] = useState('3000');
   const [isLoading, setIsLoading] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [localIp, setLocalIp] = useState<string | null>(null);
-  const [networkConnected, setNetworkConnected] = useState(true);
-  const [networkType, setNetworkType] = useState('unknown');
 
-  // Check network status and get IP on mount
-  useEffect(() => {
-    const checkNetwork = async () => {
-      const [connected, ip, type] = await Promise.all([
-        isConnectedToNetwork(),
-        getLocalIpAddress(),
-        getNetworkType(),
-      ]);
-      
-      setNetworkConnected(connected);
-      setLocalIp(ip);
-      setNetworkType(type);
-      
-      // Auto-populate server host with detected IP when in join mode
-      if (ip && serverHost === '') {
-        setServerHost(ip);
-      }
-    };
-    
-    checkNetwork();
-  }, []);
 
   // Handle create room
   const handleCreateRoom = async () => {
@@ -93,24 +66,13 @@ export default function MultiplayerLobbyScreen() {
     }
 
     if (!roomId.trim()) {
-      Alert.alert('Error', 'Please enter room ID');
-      return;
-    }
-
-    if (!serverHost.trim()) {
-      Alert.alert('Error', 'Please enter server host');
-      return;
-    }
-
-    const port = parseInt(serverPort, 10);
-    if (isNaN(port) || port < 1 || port > 65535) {
-      Alert.alert('Error', 'Invalid port number');
+      Alert.alert('Error', 'Please enter room code');
       return;
     }
 
     setIsLoading(true);
     try {
-      await joinRoom(roomId.trim().toUpperCase(), username.trim(), selectedEmoji, serverHost.trim(), port);
+      await joinRoom(roomId.trim().toUpperCase(), username.trim(), selectedEmoji);
       
       // Navigate to lobby
       router.push({
@@ -129,22 +91,7 @@ export default function MultiplayerLobbyScreen() {
   const renderMenu = () => (
     <View style={styles.menuContainer}>
       <Text style={styles.title}>Multiplayer</Text>
-      <Text style={styles.subtitle}>Compete with friends in real-time!</Text>
-
-      {/* Network Status */}
-      <View style={styles.networkStatus}>
-        <MaterialCommunityIcons 
-          name={networkConnected ? "wifi" : "wifi-off"} 
-          size={20} 
-          color={networkConnected ? "#10b981" : "#ef4444"} 
-        />
-        <Text style={styles.networkStatusText}>
-          {networkConnected 
-            ? `Connected via ${networkType.toUpperCase()}${localIp ? ` • ${localIp}` : ''}`
-            : 'No network connection'
-          }
-        </Text>
-      </View>
+      <Text style={styles.subtitle}>Compete with friends in real-time</Text>
 
       <View style={styles.buttonContainer}>
         <TouchableOpacity
@@ -152,9 +99,8 @@ export default function MultiplayerLobbyScreen() {
           onPress={() => setMode('create')}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="plus-circle" size={40} color="#ffffff" />
+          <MaterialCommunityIcons name="plus-circle" size={40} color="#6366f1" />
           <Text style={styles.modeButtonText}>Create Room</Text>
-          <Text style={styles.modeButtonDesc}>Host a new game</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -162,9 +108,8 @@ export default function MultiplayerLobbyScreen() {
           onPress={() => setMode('join')}
           activeOpacity={0.8}
         >
-          <MaterialCommunityIcons name="login" size={40} color="#ffffff" />
+          <MaterialCommunityIcons name="login" size={40} color="#6366f1" />
           <Text style={styles.modeButtonText}>Join Room</Text>
-          <Text style={styles.modeButtonDesc}>Enter room code</Text>
         </TouchableOpacity>
       </View>
 
@@ -173,7 +118,7 @@ export default function MultiplayerLobbyScreen() {
         onPress={() => router.back()}
         activeOpacity={0.8}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
+        <MaterialCommunityIcons name="arrow-left" size={20} color="#888" />
         <Text style={styles.backButtonText}>Back</Text>
       </TouchableOpacity>
     </View>
@@ -187,7 +132,7 @@ export default function MultiplayerLobbyScreen() {
         onPress={() => setMode('menu')}
         activeOpacity={0.8}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
+        <MaterialCommunityIcons name="arrow-left" size={24} color="#888" />
       </TouchableOpacity>
 
       <Text style={styles.formTitle}>Create Room</Text>
@@ -198,22 +143,22 @@ export default function MultiplayerLobbyScreen() {
           style={styles.input}
           value={username}
           onChangeText={setUsername}
-          placeholder="Enter your username"
+          placeholder="Your name"
           placeholderTextColor="#666"
           maxLength={20}
           autoCapitalize="none"
+          autoFocus
         />
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Choose Your Emoji</Text>
+        <Text style={styles.label}>Avatar</Text>
         <TouchableOpacity
           style={styles.emojiButton}
           onPress={() => setShowEmojiPicker(true)}
           activeOpacity={0.8}
         >
           <Text style={styles.selectedEmoji}>{selectedEmoji}</Text>
-          <Text style={styles.emojiButtonText}>Tap to change</Text>
         </TouchableOpacity>
       </View>
 
@@ -223,9 +168,11 @@ export default function MultiplayerLobbyScreen() {
         disabled={isLoading}
         activeOpacity={0.8}
       >
-        <Text style={styles.actionButtonText}>
-          {isLoading ? 'Creating...' : 'Create Room'}
-        </Text>
+        {isLoading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.actionButtonText}>Create Room</Text>
+        )}
       </TouchableOpacity>
     </View>
   );
@@ -238,21 +185,22 @@ export default function MultiplayerLobbyScreen() {
         onPress={() => setMode('menu')}
         activeOpacity={0.8}
       >
-        <MaterialCommunityIcons name="arrow-left" size={24} color="#ffffff" />
+        <MaterialCommunityIcons name="arrow-left" size={24} color="#888" />
       </TouchableOpacity>
 
       <Text style={styles.formTitle}>Join Room</Text>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Room ID</Text>
+        <Text style={styles.label}>Room Code</Text>
         <TextInput
           style={styles.input}
           value={roomId}
           onChangeText={(text) => setRoomId(text.toUpperCase())}
-          placeholder="Enter 6-digit room code"
+          placeholder="e.g., ABC123"
           placeholderTextColor="#666"
           maxLength={6}
           autoCapitalize="characters"
+          autoFocus
         />
       </View>
 
@@ -262,7 +210,7 @@ export default function MultiplayerLobbyScreen() {
           style={styles.input}
           value={username}
           onChangeText={setUsername}
-          placeholder="Enter your username"
+          placeholder="Your name"
           placeholderTextColor="#666"
           maxLength={20}
           autoCapitalize="none"
@@ -270,59 +218,14 @@ export default function MultiplayerLobbyScreen() {
       </View>
 
       <View style={styles.inputGroup}>
-        <Text style={styles.label}>Choose Your Emoji</Text>
+        <Text style={styles.label}>Avatar</Text>
         <TouchableOpacity
           style={styles.emojiButton}
           onPress={() => setShowEmojiPicker(true)}
           activeOpacity={0.8}
         >
           <Text style={styles.selectedEmoji}>{selectedEmoji}</Text>
-          <Text style={styles.emojiButtonText}>Tap to change</Text>
         </TouchableOpacity>
-      </View>
-
-      <View style={styles.divider} />
-
-      <Text style={styles.sectionTitle}>Server Details</Text>
-      
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Host IP Address</Text>
-        <View style={styles.inputWithButton}>
-          <TextInput
-            style={[styles.input, styles.inputWithAction]}
-            value={serverHost}
-            onChangeText={setServerHost}
-            placeholder={localIp || "e.g., 192.168.1.1"}
-            placeholderTextColor="#666"
-            autoCapitalize="none"
-            keyboardType="decimal-pad"
-          />
-          {localIp && (
-            <TouchableOpacity
-              style={styles.autoFillButton}
-              onPress={() => setServerHost(localIp)}
-              activeOpacity={0.7}
-            >
-              <MaterialCommunityIcons name="autorenew" size={20} color="#6366f1" />
-            </TouchableOpacity>
-          )}
-        </View>
-        <Text style={styles.helpText}>
-          Ask the host for their IP address shown in the lobby
-        </Text>
-      </View>
-
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Port</Text>
-        <TextInput
-          style={styles.input}
-          value={serverPort}
-          onChangeText={setServerPort}
-          placeholder="e.g., 3000"
-          placeholderTextColor="#666"
-          keyboardType="number-pad"
-          maxLength={5}
-        />
       </View>
 
       <TouchableOpacity
@@ -331,9 +234,11 @@ export default function MultiplayerLobbyScreen() {
         disabled={isLoading}
         activeOpacity={0.8}
       >
-        <Text style={styles.actionButtonText}>
-          {isLoading ? 'Joining...' : 'Join Room'}
-        </Text>
+        {isLoading ? (
+          <ActivityIndicator color="#ffffff" />
+        ) : (
+          <Text style={styles.actionButtonText}>Join Room</Text>
+        )}
       </TouchableOpacity>
 
       <View style={{ height: 40 }} />
@@ -402,224 +307,173 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 32,
   },
   title: {
-    fontSize: 42,
+    fontSize: 48,
     fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#888',
-    marginBottom: 16,
-  },
-  networkStatus: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1a1a2e',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    marginBottom: 32,
-    gap: 8,
-  },
-  networkStatusText: {
-    fontSize: 13,
-    color: '#aaa',
-    flex: 1,
+    color: '#666',
+    marginBottom: 48,
   },
   buttonContainer: {
     width: '100%',
-    gap: 20,
+    gap: 16,
   },
   modeButton: {
     backgroundColor: '#1a1a2e',
     borderRadius: 16,
-    padding: 24,
+    padding: 32,
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#6366f1',
+    borderWidth: 1,
+    borderColor: '#2a2a3e',
   },
   modeButtonText: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '600',
     color: '#ffffff',
     marginTop: 12,
-  },
-  modeButtonDesc: {
-    fontSize: 14,
-    color: '#888',
-    marginTop: 4,
   },
   backButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 32,
+    marginTop: 40,
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    backgroundColor: '#1a1a2e',
-    borderRadius: 8,
+    gap: 8,
   },
   backButtonText: {
-    fontSize: 16,
-    color: '#ffffff',
-    marginLeft: 8,
+    fontSize: 15,
+    color: '#888',
   },
   formContainer: {
     flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 20,
+    paddingHorizontal: 32,
+    paddingTop: 24,
   },
   backIconButton: {
-    width: 48,
-    height: 48,
+    width: 40,
+    height: 40,
     justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#1a1a2e',
-    borderRadius: 24,
-    marginBottom: 20,
+    marginBottom: 24,
   },
   formTitle: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: 32,
+    marginBottom: 40,
   },
   inputGroup: {
     marginBottom: 24,
   },
   label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#aaa',
-    marginBottom: 8,
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#888',
+    marginBottom: 10,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
   input: {
     backgroundColor: '#1a1a2e',
     borderRadius: 12,
     padding: 16,
-    fontSize: 16,
+    fontSize: 17,
     color: '#ffffff',
     borderWidth: 1,
-    borderColor: '#333',
-  },
-  inputWithButton: {
-    position: 'relative',
-  },
-  inputWithAction: {
-    paddingRight: 48,
-  },
-  autoFillButton: {
-    position: 'absolute',
-    right: 12,
-    top: 12,
-    padding: 8,
-    backgroundColor: '#2d2d44',
-    borderRadius: 8,
+    borderColor: '#2a2a3e',
   },
   helpText: {
     fontSize: 12,
     color: '#666',
-    marginTop: 6,
-    fontStyle: 'italic',
+    marginTop: 8,
   },
   emojiButton: {
     backgroundColor: '#1a1a2e',
     borderRadius: 12,
-    padding: 20,
+    padding: 24,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: '#2a2a3e',
   },
   selectedEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  emojiButtonText: {
-    fontSize: 14,
-    color: '#888',
+    fontSize: 56,
   },
   actionButton: {
     backgroundColor: '#6366f1',
     borderRadius: 12,
     padding: 18,
     alignItems: 'center',
-    marginTop: 12,
+    marginTop: 16,
+    height: 56,
+    justifyContent: 'center',
   },
   actionButtonDisabled: {
-    opacity: 0.5,
+    opacity: 0.6,
   },
   actionButtonText: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 17,
+    fontWeight: '600',
     color: '#ffffff',
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#333',
-    marginVertical: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: 16,
   },
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
     justifyContent: 'center',
     alignItems: 'center',
+    padding: 24,
   },
   emojiPickerContainer: {
     backgroundColor: '#1a1a2e',
-    borderRadius: 20,
-    padding: 24,
-    width: width - 48,
+    borderRadius: 24,
+    padding: 28,
+    width: '100%',
+    maxWidth: 400,
     maxHeight: '80%',
   },
   emojiPickerTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '600',
     color: '#ffffff',
-    marginBottom: 20,
+    marginBottom: 24,
     textAlign: 'center',
   },
   emojiGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 12,
+    gap: 10,
   },
   emojiOption: {
-    width: 60,
-    height: 60,
+    width: 64,
+    height: 64,
     justifyContent: 'center',
     alignItems: 'center',
-    borderRadius: 12,
+    borderRadius: 16,
     backgroundColor: '#0a0a0f',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   emojiOptionSelected: {
     borderColor: '#6366f1',
-    backgroundColor: '#6366f1',
+    backgroundColor: 'rgba(99, 102, 241, 0.1)',
   },
   emojiOptionText: {
-    fontSize: 32,
+    fontSize: 36,
   },
   closeModalButton: {
-    backgroundColor: '#6366f1',
+    backgroundColor: '#2a2a3e',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
-    marginTop: 20,
+    marginTop: 24,
   },
   closeModalButtonText: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontWeight: '600',
     color: '#ffffff',
   },
 });

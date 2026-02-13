@@ -38,7 +38,7 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
   
   const fadeOpacity = useSharedValue(0);
   const instructionOpacity = useSharedValue(1);
-  const timerRef = React.useRef<NodeJS.Timeout | null>(null);
+  const timerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
   const pauseTimeRef = React.useRef<number>(0);
   const pauseStartRef = React.useRef<number>(0);
 
@@ -85,6 +85,11 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
 
   // Phase lifecycle management with speed scaling
   useEffect(() => {
+    // Don't progress through phases while paused
+    if (isPaused && phase !== 'action') {
+      return;
+    }
+    
     fadeOpacity.value = withTiming(1, { duration: scaledAnimationDuration });
     
     // Phase 1: Reveal sequence (speed-scaled)
@@ -138,7 +143,7 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
         }
       };
     }
-  }, [phase, scaledRevealDuration, scaledInterferenceDuration, scaledAnimationDuration, fadeOpacity, instructionOpacity, scaledActionTimeLimit, onTap]);
+  }, [phase, isPaused, scaledRevealDuration, scaledInterferenceDuration, scaledAnimationDuration, fadeOpacity, instructionOpacity, scaledActionTimeLimit, onTap]);
 
   // Handle pause/resume for action phase timer
   useEffect(() => {
@@ -202,7 +207,7 @@ const ReverseMemoryPuzzle: React.FC<ReverseMemoryPuzzleProps> = ({
       // Mark as complete after submission
       setPhase('complete');
     },
-    [phase, tappedItems, onTap]
+    [phase, isPaused, tappedItems, onTap]
   );
 
   // Animated instruction style

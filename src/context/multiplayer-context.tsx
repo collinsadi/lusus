@@ -32,12 +32,13 @@ interface MultiplayerContextValue {
   
   // Actions
   createRoom: (username: string, emoji: string) => Promise<string>;
-  joinRoom: (roomId: string, username: string, emoji: string, host: string, port: number) => Promise<void>;
+  joinRoom: (roomId: string, username: string, emoji: string) => Promise<void>;
   leaveRoom: () => void;
   setReady: (isReady: boolean) => void;
   updateSettings: (settings: RoomSettings) => void;
   startGame: () => void;
   updateProgress: (stats: SessionStats) => void;
+  resetGame: () => void;
   
   // Error state
   error: string | null;
@@ -61,7 +62,7 @@ export const MultiplayerProvider: React.FC<MultiplayerProviderProps> = ({ childr
   const [gameResult, setGameResult] = useState<GameResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   
-  const gameCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const gameCheckIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Generate unique player ID
   const generatePlayerId = useCallback(() => {
@@ -102,16 +103,14 @@ export const MultiplayerProvider: React.FC<MultiplayerProviderProps> = ({ childr
 
   // Join an existing room
   const joinRoom = useCallback(
-    async (roomId: string, username: string, emoji: string, host: string, port: number): Promise<void> => {
+    async (roomId: string, username: string, emoji: string): Promise<void> => {
       try {
         setError(null);
         const playerId = generatePlayerId();
         
         await socketService.joinRoom(
           roomId,
-          { id: playerId, username, emoji },
-          host,
-          port
+          { id: playerId, username, emoji }
         );
         
         const player: PlayerInfo = {
@@ -173,40 +172,77 @@ export const MultiplayerProvider: React.FC<MultiplayerProviderProps> = ({ childr
     socketService.startGame();
   }, [isHost, currentRoom]);
 
-  // Update player progress
-  const updateProgress = useCallback((stats: SessionStats) => {
-    if (!localPlayer || !gameInProgress) return;
+  // Handle timeout (called by host when time runs out)
+  const handleTimeout = useCallback(() => {
+    if (!currentRoom || !gameStartTime || !isHost) return;
     
-    const progress: GameProgress = {
-      playerId: localPlayer.id,
-      currentStreak: stats.currentStreak,
-      totalPuzzles: stats.totalPuzzles,
-      successCount: stats.successCount,
-      failureCount: stats.failureCount,
-      lastUpdateTime: Date.now(),
-    };
+    // Determine winner based on highest streak
+    const progressArray = Array.from(gameProgress.entries());
     
-    socketService.sendProgress(progress);
+    if (progressArray.length === 0) {
+      console.log('No progress data available for timeout');
+      return;
+    }
     
-    // Update local progress
-    setGameProgress((prev) => {
-      const next = new Map(prev);
-      next.set(localPlayer.id, progress);
-      return next;
+    // Sort by highest streak, then by who updated last (earlier is better)
+    progressArray.sort((a, b) => {
+      if (b[1].currentStreak !== a[1].currentStreak) {
+        return b[1].currentStreak - a[1].currentStreak;
+      }
+      return a[1].lastUpdateTime - b[1].lastUpdateTime;
     });
     
-    // Check if player won
-    if (currentRoom?.settings && stats.currentStreak >= currentRoom.settings.targetStreak) {
-      checkGameCompletion(stats);
+    const [winnerId, winnerProgress] = progressArray[0];
+    const winner = currentRoom.players.find(p => p.id === winnerId);
+    
+    if (!winner) {
+      console.log('Winner not found in room players');
+      return;
     }
-  }, [localPlayer, gameInProgress, currentRoom]);
+    
+    const timeLimit = (currentRoom.settings?.timeLimit || 60) * 1000;
+    const result: GameResult = {
+      winnerId: winner.id,
+      winnerUsername: winner.username,
+      winnerEmoji: winner.emoji,
+      finalStreak: winnerProgress.currentStreak,
+      completionTime: timeLimit,
+      allPlayers: currentRoom.players.map(p => {
+        const progress = gameProgress.get(p.id);
+        return {
+          playerId: p.id,
+          username: p.username,
+          emoji: p.emoji,
+          finalStreak: progress?.currentStreak || 0,
+        };
+      }),
+    };
+    
+    console.log('Time limit reached. Winner:', winner.username, 'with streak:', winnerProgress.currentStreak);
+    
+    // End game locally
+    setGameResult(result);
+    setGameInProgress(false);
+    
+    // Clear interval if exists
+    if (gameCheckIntervalRef.current) {
+      clearInterval(gameCheckIntervalRef.current);
+      gameCheckIntervalRef.current = null;
+    }
+    
+    // Emit to server to broadcast to all players
+    socketService.finishGame(result);
+  }, [currentRoom, gameStartTime, gameProgress, isHost]);
 
-  // Check if game is complete
+  // Check if game is complete (called by any player who reaches target)
   const checkGameCompletion = useCallback((stats: SessionStats) => {
-    if (!isHost || !currentRoom || !localPlayer || !gameStartTime) return;
+    if (!currentRoom || !localPlayer || !gameStartTime) return;
     
     const settings = currentRoom.settings;
     if (!settings) return;
+    
+    // Only proceed if local player reached target
+    if (stats.currentStreak < settings.targetStreak) return;
     
     // Find all players who reached target
     const winners = Array.from(gameProgress.entries())
@@ -223,107 +259,111 @@ export const MultiplayerProvider: React.FC<MultiplayerProviderProps> = ({ childr
       });
     
     // Add current player if they won
-    if (stats.currentStreak >= settings.targetStreak) {
-      const alreadyIncluded = winners.some(w => w.playerId === localPlayer.id);
-      if (!alreadyIncluded) {
-        winners.push({
-          playerId: localPlayer.id,
-          username: localPlayer.username,
-          emoji: localPlayer.emoji,
-          finalStreak: stats.currentStreak,
-          completionTime: Date.now() - gameStartTime,
-        });
-      }
+    const alreadyIncluded = winners.some(w => w.playerId === localPlayer.id);
+    if (!alreadyIncluded) {
+      winners.push({
+        playerId: localPlayer.id,
+        username: localPlayer.username,
+        emoji: localPlayer.emoji,
+        finalStreak: stats.currentStreak,
+        completionTime: Date.now() - gameStartTime,
+      });
     }
     
-    if (winners.length > 0) {
-      // Sort by completion time (fastest wins)
-      winners.sort((a, b) => a.completionTime - b.completionTime);
-      const winner = winners[0];
-      
-      const result: GameResult = {
-        winnerId: winner.playerId,
-        winnerUsername: winner.username,
-        winnerEmoji: winner.emoji,
-        finalStreak: winner.finalStreak,
-        completionTime: winner.completionTime,
-        allPlayers: currentRoom.players.map(p => {
-          const progress = gameProgress.get(p.id);
-          return {
-            playerId: p.id,
-            username: p.username,
-            emoji: p.emoji,
-            finalStreak: progress?.currentStreak || 0,
-          };
-        }),
-      };
-      
-      socketService.finishGame(result);
-      setGameResult(result);
-      setGameInProgress(false);
-      
-      if (gameCheckIntervalRef.current) {
-        clearInterval(gameCheckIntervalRef.current);
-        gameCheckIntervalRef.current = null;
-      }
+    // Sort by completion time (fastest wins)
+    winners.sort((a, b) => a.completionTime - b.completionTime);
+    const winner = winners[0];
+    
+    const result: GameResult = {
+      winnerId: winner.playerId,
+      winnerUsername: winner.username,
+      winnerEmoji: winner.emoji,
+      finalStreak: winner.finalStreak,
+      completionTime: winner.completionTime,
+      allPlayers: currentRoom.players.map(p => {
+        const progress = gameProgress.get(p.id);
+        return {
+          playerId: p.id,
+          username: p.username,
+          emoji: p.emoji,
+          finalStreak: progress?.currentStreak || 0,
+        };
+      }),
+    };
+    
+    // Send game finished event (server will broadcast to all players)
+    socketService.finishGame(result);
+    setGameResult(result);
+    setGameInProgress(false);
+    
+    if (gameCheckIntervalRef.current) {
+      clearInterval(gameCheckIntervalRef.current);
+      gameCheckIntervalRef.current = null;
     }
-  }, [isHost, currentRoom, localPlayer, gameStartTime, gameProgress]);
+  }, [currentRoom, localPlayer, gameStartTime, gameProgress]);
+
+  // Update player progress
+  const updateProgress = useCallback((stats: SessionStats & { isTimeout?: boolean }) => {
+    if (!localPlayer) return;
+    
+    const progress: GameProgress = {
+      playerId: localPlayer.id,
+      currentStreak: stats.currentStreak,
+      totalPuzzles: stats.totalPuzzles,
+      successCount: stats.successCount,
+      failureCount: stats.failureCount,
+      lastUpdateTime: Date.now(),
+    };
+    
+    // Only send progress if game is still in progress
+    if (gameInProgress) {
+      socketService.sendProgress(progress);
+    }
+    
+    // Update local progress
+    setGameProgress((prev) => {
+      const next = new Map(prev);
+      next.set(localPlayer.id, progress);
+      return next;
+    });
+    
+    // Handle timeout (only host calculates and emits)
+    if (stats.isTimeout && isHost && currentRoom) {
+      handleTimeout();
+      return;
+    }
+    
+    // Check if player won by reaching target
+    if (gameInProgress && currentRoom?.settings && stats.currentStreak >= currentRoom.settings.targetStreak) {
+      checkGameCompletion(stats);
+    }
+  }, [localPlayer, gameInProgress, currentRoom, isHost, handleTimeout, checkGameCompletion]);
 
   // Handle incoming messages
   useEffect(() => {
     const unsubscribe = socketService.onMessage((message: SocketMessage) => {
       switch (message.type) {
         case MessageType.ROOM_UPDATE:
-          setCurrentRoom(message.data.room);
+          const updatedRoom = message.data.room;
+          setCurrentRoom(updatedRoom);
+          
+          // Update local player state from room data
+          if (localPlayer && updatedRoom) {
+            const updatedPlayerData = updatedRoom.players.find((p: PlayerInfo) => p.id === localPlayer.id);
+            if (updatedPlayerData) {
+              setLocalPlayer(updatedPlayerData);
+            }
+          }
           break;
           
         case MessageType.GAME_STARTED:
+          const startTime = Date.now();
           setGameInProgress(true);
-          setGameStartTime(Date.now());
+          setGameStartTime(startTime);
           setGameProgress(new Map());
           setGameResult(null);
-          
-          // Start checking for time limit (if host)
-          if (isHost && currentRoom?.settings) {
-            const timeLimit = currentRoom.settings.timeLimit * 1000;
-            gameCheckIntervalRef.current = setInterval(() => {
-              if (gameStartTime && Date.now() - gameStartTime >= timeLimit) {
-                // Time's up! Determine winner based on current progress
-                const progressArray = Array.from(gameProgress.entries());
-                if (progressArray.length > 0) {
-                  progressArray.sort((a, b) => b[1].currentStreak - a[1].currentStreak);
-                  const [winnerId, winnerProgress] = progressArray[0];
-                  const winner = currentRoom!.players.find(p => p.id === winnerId);
-                  
-                  if (winner) {
-                    const result: GameResult = {
-                      winnerId: winner.id,
-                      winnerUsername: winner.username,
-                      winnerEmoji: winner.emoji,
-                      finalStreak: winnerProgress.currentStreak,
-                      completionTime: timeLimit,
-                      allPlayers: currentRoom!.players.map(p => {
-                        const progress = gameProgress.get(p.id);
-                        return {
-                          playerId: p.id,
-                          username: p.username,
-                          emoji: p.emoji,
-                          finalStreak: progress?.currentStreak || 0,
-                        };
-                      }),
-                    };
-                    
-                    socketService.finishGame(result);
-                  }
-                }
-                
-                if (gameCheckIntervalRef.current) {
-                  clearInterval(gameCheckIntervalRef.current);
-                  gameCheckIntervalRef.current = null;
-                }
-              }
-            }, 1000);
-          }
+          // Note: Timeout is now handled client-side in multiplayer-game.tsx
+          // Each client checks their local timer and triggers handleTimeout via updateProgress
           break;
           
         case MessageType.PROGRESS_UPDATE:
@@ -338,6 +378,19 @@ export const MultiplayerProvider: React.FC<MultiplayerProviderProps> = ({ childr
         case MessageType.GAME_FINISHED:
           setGameResult(message.data.result);
           setGameInProgress(false);
+          
+          if (gameCheckIntervalRef.current) {
+            clearInterval(gameCheckIntervalRef.current);
+            gameCheckIntervalRef.current = null;
+          }
+          break;
+          
+        case MessageType.GAME_RESET:
+          // Reset game state and return to lobby
+          setGameInProgress(false);
+          setGameStartTime(null);
+          setGameProgress(new Map());
+          setGameResult(null);
           
           if (gameCheckIntervalRef.current) {
             clearInterval(gameCheckIntervalRef.current);
@@ -373,6 +426,25 @@ export const MultiplayerProvider: React.FC<MultiplayerProviderProps> = ({ childr
     setError(null);
   }, []);
 
+  // Reset game state for rematch
+  const resetGame = useCallback(() => {
+    setGameInProgress(false);
+    setGameStartTime(null);
+    setGameProgress(new Map());
+    setGameResult(null);
+    
+    // Reset ready status for all players
+    if (localPlayer) {
+      setLocalPlayer({ ...localPlayer, isReady: false });
+      socketService.setReady(false);
+    }
+    
+    if (gameCheckIntervalRef.current) {
+      clearInterval(gameCheckIntervalRef.current);
+      gameCheckIntervalRef.current = null;
+    }
+  }, [localPlayer]);
+
   const value: MultiplayerContextValue = {
     isConnected,
     isHost,
@@ -389,6 +461,7 @@ export const MultiplayerProvider: React.FC<MultiplayerProviderProps> = ({ childr
     updateSettings,
     startGame,
     updateProgress,
+    resetGame,
     error,
     clearError,
   };
