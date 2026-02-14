@@ -1,73 +1,73 @@
-# React + TypeScript + Vite
+# Lusus — Website
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Landing page for **Lusus**, the reverse memory game. Built with React, TypeScript, Vite, and Tailwind CSS.
 
-Currently, two official plugins are available:
+## What it is
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+This is the public site that promotes the Lusus app. It includes:
 
-## React Compiler
+- **Hero** — Tagline “Find the shape that wasn’t there”, short description, and App Store / TestFlight / Android download buttons
+- **How it works** — Three steps: Memorize the shapes → Find the odd one out → Build your streak, plus an interactive mini-game demo
+- **Features** — Beat the Clock, Real-time Multiplayer, Track Your Progress, Learn in Seconds, Custom Game Settings, Play Anywhere
+- **Open source** — Links to the main repo and to the `main`, `server`, and `website` branches (App, Server, Website)
+- **CTA** — “Ready to test your memory?” with download buttons
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Tech stack
 
-## Expanding the ESLint configuration
+- **React** + **TypeScript**
+- **Vite** — dev server and build
+- **Tailwind CSS** — styling
+- **React Router** — routing (e.g. Home, Privacy)
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+## Setup
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+Open [http://localhost:5173](http://localhost:5173) (or the port Vite prints).
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## Build
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm run build
 ```
+
+Output is in `dist/`. Preview with `npm run preview`.
+
+## Configuration
+
+Download links are driven by `src/config.ts`:
+
+- **`STORE_LINKS.ios`** — App Store or TestFlight URL; leave empty to hide the iOS button
+- **`STORE_LINKS.android`** — Google Play URL; leave empty to hide the Play Store button
+- **`ANDROID_APK_PATH`** — Optional direct APK URL; used when `STORE_LINKS.android` is empty so the Android button still works (e.g. “Download APK”)
+
+Update these for production or TestFlight/APK releases.
+
+## Project structure
+
+```
+website/
+├── index.html          # Entry HTML, title "Lusus — Reverse Memory Game", meta/OG/Twitter
+├── src/
+│   ├── config.ts       # STORE_LINKS, ANDROID_APK_PATH
+│   ├── main.tsx
+│   ├── App.tsx
+│   ├── pages/          # HomePage, PrivacyPage, etc.
+│   ├── components/     # Layout, shared UI
+│   └── ...
+├── public/             # Static assets (favicon, icon, screenshots)
+└── README.md
+```
+
+## Related repos / branches
+
+- **App (main)** — React Native · Expo — [lusus](https://github.com/collinsadi/lusus/tree/main)
+- **Server** — Node.js · Express · Socket.io — [server](https://github.com/collinsadi/lusus/tree/server)
+- **Website** — This repo — [website](https://github.com/collinsadi/lusus/tree/website)
+
+---
+
+**Lusus** — Memorize the shapes, find the odd one out, and build your streak. Available on iOS and Android.
