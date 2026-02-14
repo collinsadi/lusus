@@ -12,14 +12,12 @@ import {
   Alert,
   Share,
   Dimensions,
-  Clipboard,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMultiplayer } from '@/context/multiplayer-context';
 import type { RoomSettings } from '@/types/multiplayer';
-import { getLocalIpAddress } from '@/utils/network';
 
 const { width } = Dimensions.get('window');
 
@@ -38,16 +36,6 @@ export default function MultiplayerLobbyScreen() {
 
   const [targetStreak, setTargetStreak] = useState(10);
   const [timeLimit, setTimeLimit] = useState(120); // 2 minutes
-  const [hostIp, setHostIp] = useState<string | null>(null);
-
-  // Get host IP address
-  useEffect(() => {
-    if (isHost) {
-      getLocalIpAddress().then((ip) => {
-        setHostIp(ip);
-      });
-    }
-  }, [isHost]);
 
   // Navigate to game when started
   useEffect(() => {
@@ -115,23 +103,13 @@ export default function MultiplayerLobbyScreen() {
   // Share room code
   const handleShareRoom = async () => {
     try {
-      const shareMessage = isHost && hostIp
-        ? `Join my Lusus multiplayer game!\n\nRoom Code: ${roomId}\nHost IP: ${hostIp}\nPort: 3000`
-        : `Join my Lusus multiplayer game! Room Code: ${roomId}`;
+      const shareMessage = `Join my Lusus multiplayer game! Room Code: ${roomId}`;
       
       await Share.share({
         message: shareMessage,
       });
     } catch (error) {
       console.error('Share failed:', error);
-    }
-  };
-
-  // Copy IP to clipboard
-  const handleCopyIp = () => {
-    if (hostIp) {
-      Clipboard.setString(hostIp);
-      Alert.alert('Copied!', 'IP address copied to clipboard');
     }
   };
 
@@ -166,14 +144,6 @@ export default function MultiplayerLobbyScreen() {
         <View style={styles.roomCodeContainer}>
           <Text style={styles.roomCodeLabel}>Room Code</Text>
           <Text style={styles.roomCode}>{roomId}</Text>
-          {isHost && hostIp && (
-            <>
-              <Text style={styles.ipLabel}>Host IP</Text>
-              <TouchableOpacity onPress={handleCopyIp} activeOpacity={0.7}>
-                <Text style={styles.ipAddress}>{hostIp} 📋</Text>
-              </TouchableOpacity>
-            </>
-          )}
         </View>
 
         <TouchableOpacity
@@ -379,17 +349,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffffff',
     letterSpacing: 2,
-  },
-  ipLabel: {
-    fontSize: 10,
-    color: '#888',
-    marginTop: 8,
-    marginBottom: 2,
-  },
-  ipAddress: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#6366f1',
   },
   shareButton: {
     width: 48,

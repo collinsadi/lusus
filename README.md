@@ -1,380 +1,164 @@
-# Lusus - Micro Puzzles Feed
+# Lusus
 
-An infinite vertical feed of ultra-short interactive puzzles built with Expo, React Native, and TypeScript.
+**Find the shape that wasn't there.** A reverse memory game for iOS and Android. Memorize the shapes, spot the odd one out before time runs out, and build your streak. One mistake resets everything.
 
-**🎮 NEW: Multiplayer Mode!** Compete with friends in real-time puzzle battles! See [MULTIPLAYER.md](./MULTIPLAYER.md) for full documentation.
-
-## Overview
-
-Lusus is a mobile-first puzzle game featuring an infinite stream of cognitive micro-puzzles designed to challenge your memory, pattern recognition, and visual processing skills. Each puzzle is a fast-paced mental challenge with immediate visual and haptic feedback.
-
-**How It Works:**
-- Start with a **10-second timer** per puzzle
-- Build your **streak** by solving puzzles correctly
-- Every **5-streak milestone** reduces your timer by 2 seconds (minimum 3 seconds)
-- The timer **never increases**, even if you break your streak!
-- Puzzles get progressively harder as you improve
-- Swipe to skip any puzzle and get a new one
-
-**Experience Flow:**
-```
-memorize → identify → tap → feedback → repeat
-```
-
-## Features
-
-### Core Experience
-- **First-Time Tutorial**: Interactive step-by-step guide for new players (can be replayed anytime)
-- **Custom Splash Screen**: Playful entry experience with random motivational notes
-- **Reverse Memory Gameplay**: Fast-paced cognitive challenge testing working memory
-- **Progressive Timer System**: Start at 10s, reduce by 2s every 5-streak milestone (minimum 3s)
-- **Multiple Puzzle Types**: Reverse Memory (primary), Oddity Detection, with more coming soon
-- **Adaptive Difficulty**: Puzzles automatically scale based on your performance
-- **Instant Feedback**: Visual animations + haptic responses for every interaction
-- **Session Statistics**: Track streaks, success rate, and progress in real-time
-- **Streak Rewards**: Reach a 100-streak to unlock a unique shareable card!
-- **Deterministic Generation**: Seeded puzzles for reproducibility and sharing
-
-### Multiplayer Features
-- **Real-Time Competition**: Compete with friends via TCP sockets
-- **Room System**: Create or join rooms with unique codes
-- **Customizable Games**: Set target streaks (5-50) and overall time limits (30-600s)
-- **Live Progress**: See all players' streaks update in real-time
-- **Game End Conditions**: Win by reaching target streak first OR having highest streak when time runs out
-- **Victory Leaderboard**: Modal displays final standings with winner highlighted
-- **Shareable Results**: Share your victory or performance with friends
-- **Local Network Play**: Peer-to-peer gaming on the same Wi-Fi
-- See [MULTIPLAYER.md](./MULTIPLAYER.md) and [MULTIPLAYER_SETUP.md](./MULTIPLAYER_SETUP.md) for complete documentation
-
-### Technical Highlights
-- **Scalable Architecture**: Easy to add new puzzle types
-- **Performance Optimized**: 60fps animations, view recycling, lazy loading
-- **Type-Safe**: Full TypeScript with strict typing
-- **Modern UI/UX**: React Native Reanimated for smooth animations
-- **Haptic Feedback**: Native haptic integration via Expo Haptics
-
-## Getting Started
-
-### Prerequisites
-- Node.js 18+ 
-- Expo CLI
-- iOS Simulator or Android Emulator (or physical device)
-
-### Installation
-
-```bash
-# Install dependencies
-npm install
-
-# Start development server
-npm start
-
-# Run on iOS
-npm run ios
-
-# Run on Android
-npm run android
-```
-
-### Project Structure
-
-```
-lusus/
-├── src/
-│   ├── types/              # TypeScript definitions
-│   ├── services/
-│   │   └── puzzles/        # Puzzle engine, generators, evaluators
-│   ├── components/
-│   │   ├── puzzles/        # Puzzle renderers
-│   │   └── ...             # UI components
-│   ├── context/            # React context for state
-│   ├── hooks/              # Custom React hooks
-│   └── app/                # Expo Router screens
-├── PUZZLES.md              # Detailed puzzle architecture docs
-└── README.md
-```
-
-## Gameplay Mechanics
-
-### Timer & Progression
-The game features a unique timer system designed to increase challenge as you improve:
-
-- **Starting Timer**: 10 seconds per puzzle
-- **Streak Milestones**: Every 5 correct answers in a row
-- **Timer Reduction**: -2 seconds per milestone reached
-- **Minimum Timer**: 3 seconds (never goes lower)
-- **Important**: Timer never increases, even if you break your streak
-
-**Example Progression:**
-- Streak 0-4: 10 seconds
-- Streak 5-9: 8 seconds
-- Streak 10-14: 6 seconds
-- Streak 15-19: 4 seconds
-- Streak 20+: 3 seconds (minimum maintained)
-
-### Scoring & Rewards
-Earn points for correct answers based on:
-- **Accuracy**: Get it right on the first try
-- **Difficulty Level**: Harder puzzles = more points
-- **Streak Bonuses**: Build streaks for multiplier bonuses
-- **Speed**: Faster solves contribute to higher scores
-
-**Special Milestone:**
-- 🎁 Reach a **100-streak** to unlock a unique shareable victory card!
-
-### Gameplay Tips
-- 🧠 **Pay attention** during the memorization phase
-- 📈 **Difficulty adapts** to your performance automatically
-- 👆 **Swipe to skip** any puzzle and get a new one
-- ⏱️ **Plan ahead** - the timer gets progressively faster as you build streaks
-- 🏆 **Focus on accuracy** over speed to build consistent streaks
-
-## Puzzle Types
-
-### 🧩 Reverse Memory (Primary)
-**Objective:** Memorize the shapes shown, then tap a shape that was **NOT** in the list before the timer runs out.
-
-**How to Play:**
-1. **Memorize Phase**: Watch the shapes that appear
-2. **Interference Phase**: See all shapes mixed together
-3. **Action Phase**: Tap any shape that was NOT in the memorized list
-4. Beat the timer to succeed!
-
-**Key Features:**
-- Tests your working memory and attention to detail
-- Adaptive difficulty progression
-- Seeded for replay/sharing
-- Smooth animations between phases
-- Progressive speed increases with streak milestones
-
-**Difficulty Scaling:**
-- Sequence length: 2-6 items
-- Grid size: 6-16 items
-- Reveal time: 3000-1500ms (gets faster with streaks)
-- Decoy complexity increases
-
-### 🔍 Find the Oddity
-**Objective:** Spot the different shape among similar ones.
-
-**How to Play:**
-- Look at the grid of shapes
-- Find the one that's different
-- Tap it before time runs out!
-
-**Key Features:**
-- Challenges your visual discrimination
-- Tests attention to detail
-- Variations in color, shape, or size
-
-### 🎯 More Coming Soon
-New puzzle types are in development and will be added regularly to keep your brain engaged!
-
-## Architecture
-
-### Splash Screen System
-The app features a custom in-app splash screen with:
-
-**Components:**
-- `SplashNoteService`: Manages a collection of playful, brain-themed motivational notes
-- `useSplash`: Hook for splash state management (shown/dismissed)
-- `SplashContext`: Global state provider for splash visibility
-- `SplashScreen`: Animated component with random note + play button
-
-**Features:**
-- Random note selection per session (avoids immediate repeats)
-- Smooth entrance animations (fade, scale, floating)
-- Haptic feedback on button press
-- Lightweight state tracking (`hasSeenSplash`)
-- Easy to extend with seasonal themes or onboarding
-
-**Usage in Testing:**
-```typescript
-const { resetSplash } = useSplashContext();
-// Call resetSplash() to show splash again
-```
-
-### Tutorial System
-First-time users are guided through the game mechanics with an interactive tutorial:
-
-**Components:**
-- `TutorialOverlay`: 6-step interactive tutorial component with animations
-- `useTutorial`: Hook for managing tutorial state with AsyncStorage persistence
-- Help icon in stats display for replaying the tutorial
-
-**Features:**
-- Shows automatically on first play (after initialization)
-- Explains the core rule: find what's NOT in the sequence before time runs out
-- Skip functionality available at any time
-- Can be replayed via help button (?)
-- State persisted across app sessions
-- Beautiful animations and haptic feedback
-- Progress indicator showing current step
-
-**Tutorial Steps:**
-1. Welcome to Lusus
-2. Step 1: Memorize shapes
-3. Step 2: Find the new one (not in sequence)
-4. Step 3: Beat the timer
-5. Build your streak
-6. Ready to play
-
-**Usage:**
-```typescript
-const { shouldShowTutorial, completeTutorial, skipTutorial, resetTutorial } = useTutorial();
-
-// Reset tutorial for testing
-await resetTutorial();
-```
-
-For detailed documentation, see [TUTORIAL_FEATURE.md](./TUTORIAL_FEATURE.md).
-
-### Puzzle Engine
-The system is built on a modular architecture with clear separation of concerns:
-
-```
-┌─────────────────────────────────────────┐
-│         Puzzle Registry                 │
-│  (Central hub for all puzzle types)     │
-└─────────────────────────────────────────┘
-                    │
-        ┌───────────┴───────────┐
-        ▼                       ▼
-┌───────────────┐      ┌───────────────┐
-│  Generators   │      │  Evaluators   │
-│  (Create)     │      │  (Judge)      │
-└───────────────┘      └───────────────┘
-        │                       │
-        └───────────┬───────────┘
-                    ▼
-        ┌───────────────────────┐
-        │   Puzzle Instance     │
-        │   (Definition + Data) │
-        └───────────────────────┘
-                    │
-                    ▼
-        ┌───────────────────────┐
-        │   Puzzle Renderer     │
-        │   (Visual Component)  │
-        └───────────────────────┘
-```
-
-### Key Components
-
-**PuzzleRegistry**
-- Central hub managing all puzzle types
-- Maps types to generators and evaluators
-- Provides puzzle instantiation
-
-**Generators**
-- Implement `PuzzleGenerator` interface
-- Generate puzzle definitions from seeds
-- Create deterministic puzzle data
-
-**Evaluators**
-- Extend `BasePuzzleEvaluator`
-- Judge user interactions
-- Return success/failure with feedback data
-
-**Renderers**
-- React Native components
-- Render puzzle UI
-- Handle user interactions
-
-**PuzzleContext**
-- Manages puzzle queue
-- Tracks session statistics
-- Handles state transitions
-
-### Seeded Generation
-
-All puzzles use a deterministic random number generator (Mulberry32):
-```typescript
-const puzzle = PuzzleRegistry.generatePuzzle(type, baseSeed, index);
-// Same seed + index = same puzzle every time
-```
-
-This enables:
-- Reproducible puzzles
-- Puzzle sharing via seed
-- Consistent difficulty progression
-
-## Performance
-
-### Optimizations
-- **Memoized Components**: Prevent unnecessary re-renders
-- **FlatList Recycling**: Efficient view recycling for infinite scroll
-- **Lazy Instantiation**: Puzzles generated on-demand
-- **Prefetching**: Next puzzle preloaded for smooth transitions
-
-### Animation Performance
-- React Native Reanimated for 60fps animations
-- Worklet-based animations (runs on UI thread)
-- Spring physics for natural motion
-
-## Adding New Puzzles
-
-See [PUZZLES.md](./PUZZLES.md) for detailed instructions on adding new puzzle types.
-
-Quick overview:
-1. Define types in `src/types/puzzle.ts`
-2. Create generator in `src/services/puzzles/generators/`
-3. Create evaluator in `src/services/puzzles/evaluators/`
-4. Create renderer in `src/components/puzzles/`
-5. Register in `puzzle-registry.ts` and `puzzle-renderer.tsx`
-
-## Technologies
-
-### Frontend (Mobile App)
-- **Expo** - React Native framework
-- **TypeScript** - Type safety
-- **React Native Reanimated** - 60fps animations
-- **React Native Gesture Handler** - Touch interactions
-- **Expo Haptics** - Haptic feedback
-- **Expo Router** - File-based routing
-- **Socket.io Client** - Real-time multiplayer communication
-
-### Backend (Multiplayer Server)
-- **Node.js + Express** - Server framework
-- **Socket.io** - WebSocket-based real-time communication
-- **TypeScript** - Type-safe server code
-- See [MULTIPLAYER_SETUP.md](./MULTIPLAYER_SETUP.md) for server setup
-
-## Development
-
-```bash
-# Lint code
-npm run lint
-
-# Type check
-npx tsc --noEmit
-
-# Format code
-npx prettier --write "src/**/*.{ts,tsx}"
-```
-
-## Future Enhancements
-
-- ✅ **Difficulty Progression**: Implemented with adaptive scaling
-- ✅ **Progressive Timer System**: Implemented with streak-based reduction
-- ✅ **Multiplayer Mode**: Real-time competitive gameplay with rooms
-- ✅ **100-Streak Milestone**: Shareable card reward system
-- **Daily Challenges**: Curated puzzles with global leaderboards
-- **Puzzle Sharing**: Share specific puzzles via seed (infrastructure ready)
-- **More Puzzle Types**: Expanding beyond Reverse Memory and Oddity Detection
-- **Theme Packs**: Alternate shape sets and color schemes
-- **Achievements**: Extended unlock system for various milestones
-- **Sound Design**: Audio feedback and background music
-- **Analytics**: Performance tracking and difficulty tuning
-- **Global Leaderboards**: Compare your best streaks worldwide
-
-## License
-
-MIT
-
-## Contributing
-
-Contributions are welcome! Please open an issue or submit a pull request.
+Built with **Expo**, **React Native**, and **TypeScript**. This README is a technical map for contributors.
 
 ---
 
-**Built with ❤️ for puzzle enthusiasts**
+## Quick start
+
+**Prerequisites:** Node.js 18+, iOS Simulator / Android Emulator or device
+
+```bash
+npm install
+npm start
+# Then: npm run ios  or  npm run android
+```
+
+**Path alias:** `@/` → `src/` (e.g. `@/context/puzzle-context` → `src/context/puzzle-context.tsx`).
+
+---
+
+## Codebase map
+
+### App entry and routing
+
+- **`src/app/_layout.tsx`** — Root layout. Wraps app in `SplashProvider` → `PuzzleProvider` → `MultiplayerProvider`, then renders `Stack` with all screens. Renders `SplashScreen` overlay when `shouldShowSplash`. **Add new global providers or stack screens here.**
+- **`src/app/(tabs)/_layout.tsx`** — Tab layout. Defines tab stack: `index`, `explore`, `multiplayer`.
+- **Screens (where to go for what):**
+
+| Screen | Path | Purpose |
+|--------|------|---------|
+| Main puzzle feed | `src/app/(tabs)/index.tsx` | Vertical swipeable feed, uses `usePuzzleFeed` + `PuzzleRenderer`, shows `StatsDisplay`, `TutorialOverlay`, `FeedbackOverlay`. |
+| Explore | `src/app/(tabs)/explore.tsx` | Secondary tab content. |
+| Multiplayer hub | `src/app/(tabs)/multiplayer.tsx` | Entry to multiplayer; navigates to lobby. |
+| Multiplayer lobby | `src/app/multiplayer-lobby.tsx` | Create/join room, set username/emoji, configure target streak & time limit. |
+| Multiplayer game | `src/app/multiplayer-game.tsx` | In-game screen; same puzzle feed with shared progress. |
+| Multiplayer results | `src/app/multiplayer-results.tsx` | Post-game leaderboard and share. |
+| Rules (modal) | `src/app/rules.tsx` | Modal with rules. |
+| Splash | `src/app/splash.tsx` | In-app splash with random note and play button. |
+| Modal | `src/app/modal.tsx` | Generic modal. |
+
+---
+
+### Puzzle system
+
+Single-player puzzles are driven by **types → registry → generators/evaluators → engine → renderer**.
+
+- **Types** — `src/types/puzzle.ts`  
+  `PuzzleType` enum, `PuzzleDefinition`, `PuzzleInstance`, `PuzzleCoreData` (e.g. `ReverseMemoryPuzzleData`), `PuzzleGenerator`, `PuzzleEvaluator`, `SessionStats`, etc. **Add a new puzzle type: extend enums and add `*Config` / `*PuzzleData` interfaces here.**
+
+- **Registry** — `src/services/puzzles/puzzle-registry.ts`  
+  Singleton that holds all generators and evaluators. `generatePuzzle(type, baseSeed, index, difficulty?, streakMilestone?)`, `generateRandomPuzzle()`. **Register new puzzle type here in `initializeRegistry()`.**
+
+- **Generators** — `src/services/puzzles/generators/`  
+  One file per type: `reverse-memory-generator.ts`, `oddity-generator.ts`, `timing-generator.ts`, `rotation-generator.ts`, `rule-switch-generator.ts`. Each implements `PuzzleGenerator`: `generateDefinition()`, `generateData()`. **Add a new generator in this folder and register it in the registry.**
+
+- **Evaluators** — `src/services/puzzles/evaluators/`  
+  One file per type: `reverse-memory-evaluator.ts`, `oddity-evaluator.ts`, etc. Each implements `PuzzleEvaluator`: `evaluate(instance, interaction)` → `EvaluationResult`. **Add a new evaluator here and register it.**
+
+- **Engine** — `src/services/puzzles/engine/`  
+  - `puzzle-factory.ts` — Builds `PuzzleInstance` from definition + data.  
+  - `seeded-random.ts` — Seeded RNG (Mulberry32) for deterministic puzzles.  
+  - `difficulty-controller.ts` — Maps round/difficulty/streak to params (sequence length, grid size, reveal duration, action time limit).  
+  - `streak-speed-controller.ts` — Speed multipliers from streak (e.g. every 5 streak = faster reveal/interference).  
+
+- **Renderer** — `src/components/puzzles/puzzle-renderer.tsx`  
+  Switches on `instance.definition.type` and renders the right component. **Add a new branch and import your puzzle component.**
+
+- **Puzzle UI components** — `src/components/puzzles/`  
+  `reverse-memory-puzzle.tsx`, `oddity-puzzle.tsx`, `timing-puzzle.tsx`, `rotation-puzzle.tsx`, `rule-switch-puzzle.tsx`. Each receives `data` and callbacks (`onTap`, `onRotate`, etc.). **Add a new component here and wire it in `puzzle-renderer.tsx`.**
+
+**Adding a new puzzle type (checklist):**  
+1. Add type to `PuzzleType` and data interfaces in `src/types/puzzle.ts`.  
+2. Create generator in `src/services/puzzles/generators/` and evaluator in `src/services/puzzles/evaluators/`.  
+3. Register both in `src/services/puzzles/puzzle-registry.ts`.  
+4. Create component in `src/components/puzzles/` and add case in `src/components/puzzles/puzzle-renderer.tsx`.  
+
+See **PUZZLES.md** for full puzzle architecture.
+
+---
+
+### State and data flow
+
+- **`src/context/puzzle-context.tsx`** — Puzzle queue and session. Holds `currentPuzzle`, `nextPuzzle`, `sessionStats`, `lastResult`. Exposes `initialize()`, `submitInteraction()`, `loadNextPuzzle()`, `resetSession()`. Uses `PuzzleRegistry` to generate (currently **Reverse Memory** only in the feed) and evaluators to score. **Change feed difficulty or which puzzle type is used in `generateNextPuzzle()`.**
+
+- **`src/context/multiplayer-context.tsx`** — Multiplayer state: connection, room, players, game progress, results. Uses `socket-service`. Exposes `createRoom`, `joinRoom`, `leaveRoom`, `updateProgress`, `startGame`, etc.
+
+- **`src/context/splash-context.tsx`** — Splash visibility and note. `shouldShowSplash`, `splashNote`, `dismissSplash`. Uses `SplashNoteService` for the random note.
+
+- **`src/hooks/usePuzzleFeed.ts`** — Composes `usePuzzle()` and adds feed behavior: `handleInteraction` (submit + auto-advance after delay), `skipToNext`, `isPuzzleCompleted`. Used by the main feed screen.
+
+- **`src/hooks/useTutorial.ts`** — Tutorial show/skip/complete, persisted (e.g. AsyncStorage). Used by feed to show `TutorialOverlay` on first run.
+
+- **`src/hooks/useSplash.ts`** — Thin wrapper over splash context.
+
+---
+
+### Multiplayer
+
+- **`src/services/multiplayer/socket-service.ts`** — Socket.io client. Connects to backend (`BACKEND_URL`), handles create/join room, ready, settings, start, progress, result. **Change server URL here.**
+
+- **`src/types/multiplayer.ts`** — `PlayerInfo`, `MultiplayerRoom`, `RoomSettings`, `GameProgress`, `GameResult`, `MessageType`, etc.
+
+- **`src/utils/network.ts`** — Expo network helpers: `getLocalIpAddress()`, `isConnectedToNetwork()`, `getNetworkType()`.
+
+Server setup: see **MULTIPLAYER_SETUP.md** and **server/** in the repo.
+
+---
+
+### Key components
+
+- **`src/components/feedback-overlay.tsx`** — Success/failure overlay after a puzzle (e.g. particles, message).
+- **`src/components/stats-display.tsx`** — Session stats (streak, success rate, etc.) and help button (reopen tutorial).
+- **`src/components/tutorial-overlay.tsx`** — First-time tutorial steps.
+- **`src/components/puzzle-card.tsx`** — Wrapper/card for a puzzle in the feed.
+- **`src/components/shape-tile.tsx`** — Reusable shape tile for puzzles.
+- **`src/components/success-particles.tsx`** / **`src/components/error-particles.tsx`** — Feedback animations.
+- **`src/components/themed-text.tsx`** / **`src/components/themed-view.tsx`** — Theme-aware primitives.
+- **`src/components/ui/`** — Shared UI (e.g. `collapsible`, `icon-symbol`).
+
+---
+
+### Constants and config
+
+- **`src/constants/puzzles.ts`** — `PUZZLE_CONSTANTS`: prefetch count, transition delay, difficulty levels, animation durations, haptic levels, colors.
+- **`src/constants/theme.ts`** — Theme-related constants.
+- **`app.json`** — Expo app config (name, slug, bundle id, plugins, etc.).
+
+---
+
+### Splash and tutorial
+
+- **`src/services/splash-note-service.ts`** — List of splash notes and `getRandomNote()` (avoids immediate repeat). **Edit copy or add notes here.**
+- **`src/app/splash.tsx`** — Splash UI; receives `note` and `onDismiss` from context.
+- Tutorial steps and flow live in **`src/components/tutorial-overlay.tsx`** and **`src/hooks/useTutorial.ts`**. See **TUTORIAL_FEATURE.md** for details.
+
+---
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm start` | Start Expo dev server |
+| `npm run ios` | Run on iOS |
+| `npm run android` | Run on Android |
+| `npm run lint` | Run ESLint |
+| `npx tsc --noEmit` | Type-check |
+| `npx prettier --write "src/**/*.{ts,tsx}"` | Format |
+
+---
+
+
+## Repo layout
+
+- **This folder (app)** — Expo/React Native app; gameplay, UI, multiplayer client.
+- **server/** — Node.js + Express + Socket.io multiplayer server.
+- **website/** — Landing page (React + Vite + Tailwind).
+
+---
+
+## License
+
+MIT. Contributions welcome — open an issue or PR.
