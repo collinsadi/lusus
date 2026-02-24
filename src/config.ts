@@ -4,7 +4,7 @@
  * If android is empty, the Android button will link to the APK at ANDROID_APK_PATH (if set).
  */
 export const STORE_LINKS = {
-  ios: 'https://testflight.apple.com/join/CF2tgGgx',       // e.g. 'https://apps.apple.com/app/lusus/id123456789' or a TestFlight link
+  ios: 'https://apps.apple.com/ng/app/lusus-reverse-memory/id6759148970',       // e.g. 'https://apps.apple.com/app/lusus/id123456789' or a TestFlight link
   android: '',   // e.g. 'https://play.google.com/store/apps/details?id=com.lusus'
 };
 
